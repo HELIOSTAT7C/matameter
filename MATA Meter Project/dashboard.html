@@ -1,0 +1,2538 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MATA — Transformer Monitoring Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <style>
+    :root {
+      --bg: #0A0A0C;
+      --panel: #151518;
+      --panel-2: #232328;
+      --line: #34343B;
+      --text: #F7F7F5;
+      --text-dim: #B7B7BC;
+      --text-faint: #77777F;
+      --accent: #E63946;
+      --good: #F2F2F0;
+      --warn: #FF6B6B;
+      --crit: #D90429;
+      --glass: rgba(255, 255, 255, .075);
+      --glass-strong: rgba(255, 255, 255, .11);
+      --glass-border: rgba(255, 255, 255, .16);
+      --glass-highlight: rgba(255, 255, 255, .22);
+      --font-ui: 'IBM Plex Sans', -apple-system, sans-serif;
+      --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 78% 18%, rgba(230, 57, 70, .12), transparent 32%),
+        radial-gradient(circle at 20% 84%, rgba(255, 255, 255, .045), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::selection {
+      background: var(--accent);
+      color: #0A0A0C;
+    }
+
+    /* ---------- LOGIN ---------- */
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(230, 57, 70, 0.16), transparent 40%),
+        var(--bg);
+      z-index: 100;
+    }
+
+    .login-card {
+      width: 360px;
+      padding: 36px 32px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .055));
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, .42), inset 0 1px 0 var(--glass-highlight);
+      backdrop-filter: blur(24px) saturate(135%);
+      -webkit-backdrop-filter: blur(24px) saturate(135%);
+      border-top: 3px solid var(--accent);
+    }
+
+    .login-mark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .login-mark .dot {
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    .login-mark .name {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      font-size: 15px;
+    }
+
+    .login-mark .sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .login-card h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .login-card p {
+      color: var(--text-dim);
+      font-size: 12.5px;
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .field input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 10px 12px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .field input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--accent);
+      color: #1A1006;
+      border: none;
+      font-weight: 600;
+      padding: 11px;
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-primary:hover {
+      background: #FFA04D;
+    }
+
+    .login-foot {
+      margin-top: 18px;
+      font-size: 10.5px;
+      color: var(--text-faint);
+      text-align: center;
+    }
+
+    /* ---------- APP SHELL ---------- */
+    #app {
+      display: none;
+      height: 100vh;
+      grid-template-columns: 220px 1fr;
+      grid-template-rows: 56px 1fr;
+      transition: grid-template-columns .32s cubic-bezier(.22, .61, .36, 1);
+    }
+
+    #app.active {
+      display: grid;
+    }
+
+    #app.sidebar-collapsed {
+      grid-template-columns: 68px 1fr;
+    }
+
+    #topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--glass-border);
+      background: rgba(21, 21, 24, .72);
+      backdrop-filter: blur(22px) saturate(135%);
+      -webkit-backdrop-filter: blur(22px) saturate(135%);
+      box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .05);
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .device-label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .conn-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--good);
+      font-family: var(--font-mono);
+    }
+
+    .conn-pill .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--good);
+      box-shadow: 0 0 6px var(--good);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .clock {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .signout {
+      font-size: 12px;
+      color: var(--text-dim);
+      cursor: pointer;
+      border: 1px solid var(--line);
+      padding: 6px 12px;
+    }
+
+    .signout:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    #sidebar {
+      border-right: 1px solid var(--glass-border);
+      background: rgba(21, 21, 24, .68);
+      backdrop-filter: blur(22px) saturate(135%);
+      -webkit-backdrop-filter: blur(22px) saturate(135%);
+      box-shadow: inset -1px 0 0 rgba(255, 255, 255, .04);
+      padding: 18px 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .side-mark {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 18px 20px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 12px;
+      min-width: 220px;
+      position: relative;
+    }
+
+    .side-toggle {
+      margin-left: auto;
+      width: 41px;
+      height: 41px;
+      flex: 0 0 41px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0;
+      display: grid;
+      place-items: center;
+    }
+
+    .side-toggle:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .side-mark .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+
+    .side-mark .name {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    nav.tabs {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 0 10px;
+    }
+
+    nav.tabs button {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: var(--font-ui);
+      font-size: 13px;
+      padding: 10px 10px;
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      min-width: 200px;
+      transition: color .16s ease, background .16s ease, border-color .16s ease, padding .28s ease;
+    }
+
+    nav.tabs button:hover {
+      color: var(--text);
+      background: var(--panel-2);
+    }
+
+    nav.tabs button.active {
+      color: var(--text);
+      background: var(--panel-2);
+      border-left: 2px solid var(--accent);
+    }
+
+    nav.tabs .ico {
+      width: 14px;
+      text-align: center;
+      font-family: var(--font-mono);
+      color: var(--text-faint);
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .nav-label {
+      white-space: nowrap;
+      opacity: 1;
+      transition: opacity .22s cubic-bezier(.22, .61, .36, 1), width .22s cubic-bezier(.22, .61, .36, 1);
+    }
+
+    #app.sidebar-collapsed .side-mark {
+      min-width: 68px;
+      padding-left: 13px;
+      padding-right: 13px;
+      justify-content: center;
+    }
+
+    #app.sidebar-collapsed .side-mark .name,
+    #app.sidebar-collapsed .side-mark .dot,
+    #app.sidebar-collapsed .nav-label {
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+    }
+
+    #app.sidebar-collapsed .side-toggle {
+      position: absolute;
+      left: 50%;
+      margin-left: 0;
+      transform: translateX(-50%) rotate(180deg);
+      transition: transform .32s cubic-bezier(.22, .61, .36, 1), color .18s ease, border-color .18s ease;
+    }
+
+    #app.sidebar-collapsed nav.tabs {
+      padding: 0 10px;
+    }
+
+    #app.sidebar-collapsed nav.tabs button {
+      min-width: 48px;
+      width: 48px;
+      height: 61px;
+      justify-content: center;
+      align-items: center;
+      gap: 0;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 0;
+      padding-right: 0;
+      border-left: 0;
+      border-right: 0;
+    }
+
+    #app.sidebar-collapsed nav.tabs button.active {
+      box-shadow: inset -2px 0 var(--accent);
+    }
+
+    #app.sidebar-collapsed nav.tabs .ico {
+      width: 41px;
+      height: 41px;
+      flex: 0 0 41px;
+      font-size: 24px;
+      line-height: 41px;
+      display: grid;
+      place-items: center;
+    }
+
+    nav.tabs button.active .ico {
+      color: var(--accent);
+    }
+
+    #main {
+      overflow-y: auto;
+      padding: 22px 26px;
+      padding-bottom: calc(11vh + 42px);
+    }
+
+    .loading-bar-panel {
+      position: fixed;
+      z-index: 700;
+      left: 234px;
+      right: 14px;
+      bottom: 14px;
+      height: 11vh;
+      min-height: 82px;
+      padding: 14px 20px;
+      background: rgba(21, 21, 24, .78);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, .28);
+      backdrop-filter: blur(24px) saturate(140%);
+      -webkit-backdrop-filter: blur(24px) saturate(140%);
+      transition: left .32s cubic-bezier(.22, .61, .36, 1), background .2s ease;
+    }
+
+    #app.sidebar-collapsed .loading-bar-panel {
+      left: 82px;
+    }
+
+    .loading-bar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .loading-bar-head h3 {
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .loading-bar-value {
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .loading-bar-track {
+      height: 18px;
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .loading-bar-fill {
+      height: 100%;
+      width: 0;
+      background: var(--good);
+      transition: width .6s ease, background .3s ease;
+    }
+
+    .loading-bar-scale {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+    }
+
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    .view-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .view-head h2 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .view-head .meta {
+      font-size: 11.5px;
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+    }
+
+    .overview-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .refresh-button {
+      display: inline-grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      background: var(--glass-strong);
+      color: var(--text-dim);
+      cursor: pointer;
+      box-shadow: inset 0 1px 0 var(--glass-highlight);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .refresh-button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .refresh-button:disabled {
+      cursor: wait;
+      opacity: .65;
+    }
+
+    .refresh-icon {
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .refresh-button.is-refreshing .refresh-icon {
+      animation: rotateRefresh .8s linear infinite;
+    }
+
+    @keyframes rotateRefresh {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ---------- overview fold (map + essentials, no scroll needed) ---------- */
+    .overview-fold {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      height: 68vh;
+      min-height: 460px;
+      margin-bottom: 20px;
+    }
+
+    .map-panel {
+      flex: 1 1 auto;
+      min-height: 260px;
+      position: relative;
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      background: var(--glass);
+      box-shadow: inset 0 1px 0 var(--glass-highlight), 0 12px 28px rgba(0, 0, 0, .18);
+      backdrop-filter: blur(18px) saturate(125%);
+      -webkit-backdrop-filter: blur(18px) saturate(125%);
+      overflow: hidden;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+    }
+
+    .map-overlay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 500;
+      background: rgba(21, 21, 24, .72);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      backdrop-filter: blur(16px) saturate(135%);
+      -webkit-backdrop-filter: blur(16px) saturate(135%);
+    }
+
+    .map-overlay h3 {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .map-overlay .tag {
+      font-size: 10.5px;
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+    }
+
+    .map-user-controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 500;
+      display: flex;
+      gap: 6px;
+    }
+
+    .map-user-controls button {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      background: rgba(21, 21, 24, .78);
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 17px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .map-user-controls button:hover,
+    .map-user-controls button.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    #pin-lock-button.active {
+      border-color: var(--glass-border);
+      color: var(--text-dim);
+    }
+
+    .lock-icon {
+      position: relative;
+      display: block;
+      width: 13px;
+      height: 11px;
+      transform: translateY(3px);
+      border: 2px solid currentColor;
+      border-radius: 2px;
+    }
+
+    .lock-icon::before {
+      content: '';
+      position: absolute;
+      left: 2px;
+      top: -9px;
+      width: 5px;
+      height: 8px;
+      border: 2px solid currentColor;
+      border-bottom: 0;
+      border-radius: 5px 5px 0 0;
+    }
+
+    .coordinate-form {
+      position: absolute;
+      top: 50px;
+      right: 10px;
+      z-index: 501;
+      display: none;
+      width: 190px;
+      padding: 10px;
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      background: rgba(21, 21, 24, .86);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .28);
+      backdrop-filter: blur(16px) saturate(135%);
+      -webkit-backdrop-filter: blur(16px) saturate(135%);
+    }
+
+    .coordinate-form.visible {
+      display: grid;
+      gap: 7px;
+    }
+
+    .coordinate-form label {
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+      font-size: 9px;
+    }
+
+    .coordinate-form input,
+    .coordinate-form button {
+      width: 100%;
+      min-height: 28px;
+      padding: 5px 7px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .coordinate-form button {
+      border-color: var(--accent);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .coordinate-form button:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .map-legend {
+      position: absolute;
+      bottom: 10px;
+      left: 58px;
+      z-index: 500;
+      background: rgba(21, 21, 24, .72);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      gap: 14px;
+      font-size: 10.5px;
+      color: var(--text-dim);
+      backdrop-filter: blur(16px) saturate(135%);
+      -webkit-backdrop-filter: blur(16px) saturate(135%);
+    }
+
+    .map-legend span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .map-legend i {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .mata-marker {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--bg);
+      box-shadow: 0 0 0 2px currentColor, 0 0 8px currentColor;
+    }
+
+    .mata-marker.pulse::after {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      border: 1px solid currentColor;
+      opacity: 0.5;
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 0;
+    }
+
+    .leaflet-popup-tip {
+      background: var(--panel);
+      border: 1px solid var(--line);
+    }
+
+    .leaflet-popup-content {
+      font-family: var(--font-ui);
+      font-size: 12px;
+      margin: 10px 12px;
+    }
+
+    .leaflet-popup-content .pop-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .leaflet-popup-content .pop-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      padding: 2px 0;
+    }
+
+    .leaflet-container {
+      background: var(--bg);
+    }
+
+    .leaflet-control-zoom a {
+      background: var(--panel) !important;
+      color: var(--text) !important;
+      border-color: var(--line) !important;
+    }
+
+    .leaflet-control-attribution {
+      background: rgba(22, 31, 26, 0.75) !important;
+      color: var(--text-faint) !important;
+    }
+
+    .leaflet-control-attribution a {
+      color: var(--text-dim) !important;
+    }
+
+    /* metric cards */
+    .metric-grid {
+      flex-shrink: 0;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+    }
+
+    .metric-card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-left: 3px solid var(--good);
+      border-radius: 10px;
+      backdrop-filter: blur(18px) saturate(125%);
+      -webkit-backdrop-filter: blur(18px) saturate(125%);
+      box-shadow: inset 0 1px 0 var(--glass-highlight), 0 10px 24px rgba(0, 0, 0, .16);
+      padding: 12px 14px;
+    }
+
+    .metric-card.state-warn {
+      border-left-color: var(--warn);
+    }
+
+    .metric-card.state-crit {
+      border-left-color: var(--crit);
+    }
+
+    .metric-card .m-label {
+      font-size: 10.5px;
+      color: var(--text-dim);
+      letter-spacing: 0.3px;
+      margin-bottom: 8px;
+    }
+
+    .metric-card .m-value {
+      font-family: var(--font-mono);
+      font-size: 21px;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .metric-card .m-unit {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-weight: 400;
+      margin-left: 3px;
+    }
+
+    .metric-card .m-status {
+      font-size: 10px;
+      margin-top: 8px;
+      color: var(--good);
+      font-family: var(--font-mono);
+    }
+
+    .metric-card.state-warn .m-status {
+      color: var(--warn);
+    }
+
+    .metric-card.state-crit .m-status {
+      color: var(--crit);
+    }
+
+    .row2 {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .panel {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      backdrop-filter: blur(18px) saturate(125%);
+      -webkit-backdrop-filter: blur(18px) saturate(125%);
+      box-shadow: inset 0 1px 0 var(--glass-highlight), 0 12px 28px rgba(0, 0, 0, .18);
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-head h3 {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .panel-head .tag {
+      font-size: 10.5px;
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+    }
+
+    .panel-body {
+      padding: 14px 16px;
+    }
+
+    canvas {
+      width: 100%;
+      display: block;
+    }
+
+    /* gauge */
+    .gauge-wrap {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+    }
+
+    .gauge-num {
+      font-family: var(--font-mono);
+      font-size: 34px;
+      font-weight: 700;
+    }
+
+    .gauge-num small {
+      font-size: 14px;
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    .gauge-track {
+      flex: 1;
+      height: 8px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      position: relative;
+    }
+
+    .gauge-fill {
+      height: 100%;
+      background: var(--good);
+      transition: width .6s ease;
+    }
+
+    .gauge-marks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5px;
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+      margin-top: 5px;
+    }
+
+    .kv-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .kv-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12.5px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .kv-row:last-child {
+      border-bottom: none;
+    }
+
+    .kv-row .k {
+      color: var(--text-dim);
+    }
+
+    .kv-row .v {
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    /* analysis */
+    .analysis-line {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      color: var(--text-dim);
+      line-height: 1.7;
+      padding: 14px 16px;
+    }
+
+    .analysis-line .flag-good {
+      color: var(--good);
+    }
+
+    .analysis-line .flag-warn {
+      color: var(--warn);
+    }
+
+    /* history table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 9px 10px;
+      color: var(--text-dim);
+      font-weight: 500;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+      font-size: 10.5px;
+    }
+
+    tbody td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+      color: var(--text);
+    }
+
+    tbody tr:hover {
+      background: var(--panel-2);
+    }
+
+    .status-cell.ok {
+      color: var(--good);
+    }
+
+    .status-cell.warn {
+      color: var(--warn);
+    }
+
+    .status-cell.crit {
+      color: var(--crit);
+    }
+
+    .table-scroll {
+      max-height: 420px;
+      overflow-y: auto;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    select,
+    .btn-ghost {
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 8px 10px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      cursor: pointer;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* alerts */
+    .alert-summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .alert-stat {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      backdrop-filter: blur(18px) saturate(125%);
+      -webkit-backdrop-filter: blur(18px) saturate(125%);
+      box-shadow: inset 0 1px 0 var(--glass-highlight);
+    }
+
+    .alert-stat .n {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .alert-stat .l {
+      font-size: 10.5px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .threshold-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .thresh-item {
+      background: rgba(255, 255, 255, .045);
+      border: 1px solid rgba(255, 255, 255, .11);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 11.5px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .thresh-item .t-label {
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .thresh-item .t-val {
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    .thresh-item.c-warn .t-val {
+      color: var(--warn);
+    }
+
+    .thresh-item.c-crit .t-val {
+      color: var(--crit);
+    }
+
+    .thresh-item.c-good .t-val {
+      color: var(--good);
+    }
+
+    .log-entry {
+      display: flex;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-entry .time {
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+      width: 70px;
+      flex-shrink: 0;
+    }
+
+    .log-entry .badge {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      padding: 2px 6px;
+      height: fit-content;
+      border: 1px solid var(--warn);
+      color: var(--warn);
+      flex-shrink: 0;
+    }
+
+    .log-entry.crit .badge {
+      border-color: var(--crit);
+      color: var(--crit);
+    }
+
+    /* settings */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .set-field {
+      margin-bottom: 12px;
+    }
+
+    .set-field label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+
+    .set-field input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 8px 10px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      outline: none;
+    }
+
+    .set-field input:focus {
+      border-color: var(--accent);
+    }
+
+    .set-field .hint {
+      font-size: 10px;
+      color: var(--text-faint);
+      margin-top: 4px;
+    }
+
+    .save-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .save-msg {
+      font-size: 11.5px;
+      color: var(--good);
+      font-family: var(--font-mono);
+      opacity: 0;
+      transition: opacity .3s;
+    }
+
+    .save-msg.show {
+      opacity: 1;
+    }
+
+    /* ---------- interactivity / polish pass ---------- */
+    ::-webkit-scrollbar {
+      width: 9px;
+      height: 9px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--line);
+      border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-faint);
+    }
+
+    a,
+    button,
+    input,
+    select {
+      transition: all .18s ease;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 1px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .login-card {
+      animation: riseIn .4s ease;
+    }
+
+    @keyframes riseIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .btn-primary {
+      transition: background .18s ease, transform .12s ease;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.97);
+    }
+
+    .btn-ghost,
+    .signout {
+      transition: border-color .18s ease, color .18s ease, transform .12s ease;
+    }
+
+    .btn-ghost:active,
+    .signout:active {
+      transform: scale(0.96);
+    }
+
+    .conn-pill .dot {
+      animation: pulseDot 1.8s ease-in-out infinite;
+    }
+
+    @keyframes pulseDot {
+
+      0%,
+      100% {
+        box-shadow: 0 0 6px var(--good);
+        opacity: 1;
+      }
+
+      50% {
+        box-shadow: 0 0 12px var(--good);
+        opacity: 0.55;
+      }
+    }
+
+    nav.tabs button {
+      transition: color .16s ease, background .16s ease, border-color .16s ease;
+      border-radius: 2px;
+    }
+
+    nav.tabs button:active {
+      transform: scale(0.98);
+    }
+
+    .view.active {
+      animation: fadeIn .3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .metric-card,
+    .panel,
+    .alert-stat,
+    .thresh-item {
+      transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--text-faint);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    }
+
+    .metric-card .m-value {
+      transition: color .25s ease;
+    }
+
+    .metric-card.state-warn {
+      animation: cardWarn .5s ease;
+    }
+
+    .metric-card.state-crit {
+      animation: cardCrit .5s ease;
+    }
+
+    @keyframes cardWarn {
+      0% {
+        box-shadow: 0 0 0 rgba(255, 107, 107, 0);
+      }
+
+      40% {
+        box-shadow: 0 0 14px rgba(255, 107, 107, 0.35);
+      }
+
+      100% {
+        box-shadow: 0 0 0 rgba(255, 107, 107, 0);
+      }
+    }
+
+    @keyframes cardCrit {
+      0% {
+        box-shadow: 0 0 0 rgba(217, 4, 41, 0);
+      }
+
+      40% {
+        box-shadow: 0 0 16px rgba(217, 4, 41, 0.45);
+      }
+
+      100% {
+        box-shadow: 0 0 0 rgba(217, 4, 41, 0);
+      }
+    }
+
+    .panel:hover {
+      border-color: var(--text-faint);
+    }
+
+    tbody tr {
+      transition: background .15s ease;
+    }
+
+    .gauge-fill {
+      transition: width .6s ease, background .3s ease;
+    }
+
+    /* toast */
+    #toast {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast-item {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--good);
+      padding: 10px 16px;
+      font-size: 12.5px;
+      color: var(--text);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      animation: toastIn .25s ease, toastOut .25s ease 2.55s forwards;
+    }
+
+    @keyframes toastIn {
+      from {
+        opacity: 0;
+        transform: translateX(16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes toastOut {
+      to {
+        opacity: 0;
+        transform: translateX(16px);
+      }
+    }
+
+    @media (max-width: 900px) {
+      #app {
+        grid-template-columns: 1fr;
+      }
+
+      #sidebar {
+        display: none;
+      }
+
+      .overview-fold {
+        height: auto;
+        min-height: 0;
+      }
+
+      .map-panel {
+        height: 280px;
+        flex: none;
+      }
+
+      #main {
+        padding-bottom: calc(11vh + 28px);
+      }
+
+      .loading-bar-panel {
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+        padding: 12px 16px;
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .row2,
+      .settings-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .alert-summary {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .threshold-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ============ LOGIN ============ -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-mark">
+        <div class="dot"></div>
+        <div>
+          <div class="name">MATAMETER</div>
+          <div class="sub">Distribution Transformer Monitor</div>
+        </div>
+      </div>
+      <h1>Sign in</h1>
+      <p>Restricted to authorized cooperative operators. This is a demo build — any credentials will work.</p>
+      <div class="field">
+        <label>EMAIL</label>
+        <input type="text" id="login-email" placeholder="operator@cagelco.ph" value="demo@cagelco.ph">
+      </div>
+      <div class="field">
+        <label>PASSWORD</label>
+        <input type="password" id="login-pass" placeholder="••••••••" value="demo1234">
+      </div>
+      <button class="btn-primary" onclick="doLogin()">Sign In</button>
+      <div class="login-foot">MATAMETER v3.0 — demo build, not connected to live hardware</div>
+    </div>
+  </div>
+
+  <!-- ============ APP ============ -->
+  <div id="app">
+    <div id="topbar">
+      <div class="topbar-left">
+        <div class="device-label">MATA_001</div>
+        <div class="conn-pill">
+          <div class="dot"></div><span id="conn-label">CONNECTING</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="clock" id="clock">00:00:00</div>
+        <div class="signout" onclick="doLogout()">Sign Out</div>
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <div class="side-mark">
+        <div class="dot"></div>
+        <div class="name">MATA METER</div>
+        <button class="side-toggle" id="sidebar-toggle" type="button" aria-label="Collapse sidebar"
+          title="Collapse sidebar">‹</button>
+      </div>
+      <nav class="tabs">
+        <button class="active" data-view="overview" aria-label="Overview" title="Overview"><span
+            class="ico">⌂</span><span class="nav-label">Overview</span></button>
+        <button data-view="analysis" aria-label="Analysis" title="Analysis"><span class="ico">◈</span><span
+            class="nav-label">Analysis</span></button>
+        <button data-view="history" aria-label="History Log" title="History Log"><span class="ico">≡</span><span
+            class="nav-label">History Log</span></button>
+        <button data-view="alerts" aria-label="Alerts" title="Alerts"><span class="ico">!</span><span
+            class="nav-label">Alerts</span></button>
+        <button data-view="settings" aria-label="Settings" title="Settings"><span class="ico">⚙</span><span
+            class="nav-label">Settings</span></button>
+      </nav>
+    </div>
+
+    <div id="main">
+
+      <!-- OVERVIEW -->
+      <section class="view active" id="view-overview">
+        <div class="view-head">
+          <h2>Overview — MATA_001</h2>
+          <div class="overview-meta">
+            <div class="meta" id="overview-meta">Waiting for telemetry</div>
+            <button class="refresh-button" id="refresh-button" type="button" aria-label="Refresh readings"
+              title="Refresh readings"><span class="refresh-icon">↻</span></button>
+          </div>
+        </div>
+
+        <div class="overview-fold">
+          <div class="map-panel">
+            <div id="map"></div>
+            <div class="map-overlay">
+              <h3>Transformer Location</h3>
+              <div class="tag" id="map-location-source">Waiting for GPS telemetry</div>
+            </div>
+            <div class="map-user-controls" aria-label="Your location controls">
+              <button id="auto-pin-button" type="button" aria-label="Automatically pin my location"
+                title="Automatically pin my location">⌾</button>
+              <button id="manual-pin-button" type="button" aria-label="Manually pin my location"
+                title="Click the map to pin my location">⌖</button>
+              <button id="coordinate-pin-button" type="button" aria-label="Enter coordinates"
+                title="Enter coordinates">°</button>
+              <button id="pin-lock-button" type="button" aria-label="Lock location pin" title="Lock location pin"><span
+                  class="lock-icon" aria-hidden="true"></span></button>
+            </div>
+            <form class="coordinate-form" id="coordinate-form">
+              <label for="pin-latitude">LATITUDE</label>
+              <input id="pin-latitude" type="number" step="any" min="-90" max="90" placeholder="e.g. 14.5995" required>
+              <label for="pin-longitude">LONGITUDE</label>
+              <input id="pin-longitude" type="number" step="any" min="-180" max="180" placeholder="e.g. 120.9842"
+                required>
+              <button type="submit">Pin coordinates</button>
+            </form>
+            <div class="map-legend">
+              <span><i style="background:var(--good); color:var(--good);"></i>Normal</span>
+              <span><i style="background:var(--warn); color:var(--warn);"></i>Warning</span>
+              <span><i style="background:var(--crit); color:var(--crit);"></i>Critical</span>
+            </div>
+          </div>
+          <div class="metric-grid" id="metric-grid"></div>
+        </div>
+
+        <div class="row2">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Voltage &amp; Current</h3><span class="tag">last 60 samples</span>
+            </div>
+            <div class="panel-body"><canvas id="chart-vi" height="180"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Transformer Status</h3>
+            </div>
+            <div class="panel-body">
+              <div class="kv-list">
+                <div class="kv-row"><span class="k">Load Status</span><span class="v" id="kv-loadstatus">Normal</span>
+                </div>
+                <div class="kv-row"><span class="k">Apparent Power</span><span class="v" id="kv-s">0.000 kVA</span>
+                </div>
+                <div class="kv-row"><span class="k">Real Power</span><span class="v" id="kv-p">0.000 kW</span></div>
+                <div class="kv-row"><span class="k">Reactive Power</span><span class="v" id="kv-q">0.000 kVAR</span>
+                </div>
+                <div class="kv-row"><span class="k">Maximum Demand</span><span class="v" id="kv-maxdemand">0.000
+                    kVA</span></div>
+                <div class="kv-row"><span class="k">Average Demand</span><span class="v" id="kv-avgdemand">0.000
+                    kVA</span></div>
+                <div class="kv-row"><span class="k">GPS Status</span><span class="v" id="kv-gpsstatus">Waiting</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Temperature</h3><span class="tag">winding, °C</span>
+            </div>
+            <div class="panel-body"><canvas id="chart-temp" height="140"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ANALYSIS -->
+      <section class="view" id="view-analysis">
+        <div class="view-head">
+          <h2>Real-Time Analysis</h2>
+          <div class="meta">rule-based trend summary · refreshes every 10s</div>
+        </div>
+        <div class="panel" style="margin-bottom:14px;">
+          <div class="panel-head">
+            <h3>Trend Summary</h3>
+          </div>
+          <div class="analysis-line" id="analysis-text">Collecting data — analysis will appear after the first
+            readings…
+          </div>
+        </div>
+        <div class="row2">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Load Profile (%)</h3>
+            </div>
+            <div class="panel-body"><canvas id="chart-load" height="160"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Energy Consumption (kWh)</h3>
+            </div>
+            <div class="panel-body"><canvas id="chart-energy" height="160"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- HISTORY -->
+      <section class="view" id="view-history">
+        <div class="view-head">
+          <h2>History Log</h2>
+          <div class="meta" id="history-count">0 records</div>
+        </div>
+        <div class="toolbar">
+          <select id="history-interval">
+            <option value="1">All samples</option>
+            <option value="5">Every 5th</option>
+            <option value="10">Every 10th</option>
+          </select>
+          <button class="btn-ghost" onclick="exportCSV()">Export CSV</button>
+        </div>
+        <div class="panel">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>V</th>
+                  <th>A</th>
+                  <th>°C</th>
+                  <th>kVA</th>
+                  <th>Load %</th>
+                  <th>PF</th>
+                  <th>kW</th>
+                  <th>Freq</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="history-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ALERTS -->
+      <section class="view" id="view-alerts">
+        <div class="view-head">
+          <h2>Alert Dashboard</h2>
+          <div class="meta">threshold-based, evaluated live</div>
+        </div>
+        <div class="alert-summary">
+          <div class="alert-stat">
+            <div class="n" id="al-total">0</div>
+            <div class="l">Total Alerts</div>
+          </div>
+          <div class="alert-stat">
+            <div class="n" id="al-resolved">0</div>
+            <div class="l">Resolved</div>
+          </div>
+          <div class="alert-stat">
+            <div class="n" id="al-warn">0</div>
+            <div class="l">Warnings</div>
+          </div>
+          <div class="alert-stat">
+            <div class="n" id="al-crit">0</div>
+            <div class="l">Critical</div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-bottom:14px;">
+          <div class="panel-head">
+            <h3>Threshold Reference</h3>
+          </div>
+          <div class="panel-body">
+            <div class="threshold-grid">
+              <div class="thresh-item c-warn">
+                <div class="t-label">Temp Warning</div>
+                <div class="t-val">≥ 65 °C</div>
+              </div>
+              <div class="thresh-item c-crit">
+                <div class="t-label">Temp Alarm</div>
+                <div class="t-val">≥ 90 °C</div>
+              </div>
+              <div class="thresh-item c-crit">
+                <div class="t-label">Temp Critical</div>
+                <div class="t-val">≥ 105 °C</div>
+              </div>
+              <div class="thresh-item c-good">
+                <div class="t-label">Rated kVA</div>
+                <div class="t-val">25 kVA</div>
+              </div>
+              <div class="thresh-item c-warn">
+                <div class="t-label">Overloaded</div>
+                <div class="t-val">&gt; 70 %</div>
+              </div>
+              <div class="thresh-item c-warn">
+                <div class="t-label">Underloaded</div>
+                <div class="t-val">&lt; 40 %</div>
+              </div>
+              <div class="thresh-item c-warn">
+                <div class="t-label">Voltage Low</div>
+                <div class="t-val">≤ 220 V</div>
+              </div>
+              <div class="thresh-item c-warn">
+                <div class="t-label">Voltage High</div>
+                <div class="t-val">≥ 240 V</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Chronological Log</h3>
+          </div>
+          <div class="panel-body" id="alert-log">
+            <div style="color:var(--text-faint); font-size:12px;">No alerts recorded yet.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings">
+        <div class="view-head">
+          <h2>Settings — TX-014</h2>
+          <div class="meta">demo — changes are local only</div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Transformer Configuration</h3>
+          </div>
+          <div class="panel-body">
+            <div class="settings-grid">
+              <div>
+                <div class="set-field"><label>RATING (kVA)</label><input type="number" value="25" id="set-kva"></div>
+                <div class="set-field"><label>NOMINAL VOLTAGE (V)</label><input type="number" value="230" id="set-vnom">
+                </div>
+                <div class="set-field"><label>NOMINAL FREQUENCY (Hz)</label><input type="number" value="60"
+                    id="set-fnom"></div>
+                <div class="set-field"><label>AMBIENT TEMPERATURE (°C)</label><input type="number" value="30"></div>
+              </div>
+              <div>
+                <div class="set-field"><label>OVERLOAD TRIGGER (%)</label><input type="number" value="70"
+                    id="set-overload"></div>
+                <div class="set-field"><label>UNDERLOAD WARNING (%)</label><input type="number" value="40"
+                    id="set-underload"></div>
+                <div class="set-field"><label>TEMP WARNING (°C)</label><input type="number" value="65"
+                    id="set-tempwarn"></div>
+                <div class="set-field"><label>TEMP CRITICAL (°C)</label><input type="number" value="105"
+                    id="set-tempcrit"></div>
+              </div>
+            </div>
+            <div class="save-row">
+              <button class="btn-primary" style="width:auto; padding:10px 20px;" onclick="saveSettings()">Save
+                Settings</button>
+              <span class="save-msg" id="save-msg">Saved!</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="loading-bar-panel" aria-label="Percent loading">
+      <div class="loading-bar-head">
+        <h3>Percent Loading</h3>
+        <div class="loading-bar-value" id="gauge-load-num">ERR</div>
+      </div>
+      <div class="loading-bar-track">
+        <div class="loading-bar-fill" id="gauge-load-fill"></div>
+      </div>
+      <div class="loading-bar-scale"><span>0</span><span>40 under</span><span>70 over</span><span>100+</span></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <div id="toast"></div>
+
+  <script>
+    /* ================= SUPABASE ================= */
+    // These values must match the project configured in the ESP32 firmware.
+    const MATA_SUPABASE_URL = 'https://dyukzahnxtmusfksqdfn.supabase.co';
+    const MATA_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5dWt6YWhueHRtdXNma3NxZGZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNzA2NzMsImV4cCI6MjEwMzY0NjY3M30.MSeHAWBiV0fgMHWlsEDZAyfQw1nSSR3EVneR7d3OLKA';
+    const MATA_DEVICE_ID = 'MATA_001';
+    const hasSupabaseConfig = MATA_SUPABASE_URL.includes('.supabase.co') && !MATA_SUPABASE_ANON_KEY.includes(' ');
+    const mataSupabase = hasSupabaseConfig && window.supabase
+      ? window.supabase.createClient(MATA_SUPABASE_URL, MATA_SUPABASE_ANON_KEY, {
+        global: {
+          fetch: (url, options = {}) => fetch(url, { ...options, cache: 'no-store' })
+        }
+      })
+      : null;
+    let backendMode = false;
+    let backendTimer = null;
+    let accessRefreshNoticeShown = false;
+    const MAX_READING_AGE_MS = 30000;
+    const refreshButton = document.getElementById('refresh-button');
+    let userLocationMarker = null;
+    let userLocationLocked = false;
+    let manualPinMode = false;
+
+    /* ================= TOAST ================= */
+    function showToast(msg) {
+      const wrap = document.getElementById('toast');
+      const el = document.createElement('div');
+      el.className = 'toast-item';
+      el.textContent = msg;
+      wrap.appendChild(el);
+      setTimeout(() => el.remove(), 2900);
+    }
+
+    /* ================= AUTH / NAV ================= */
+    function doLogin() {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').classList.add('active');
+      startTelemetry();
+      setTimeout(initMap, 50);
+    }
+    function doLogout() {
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('app').classList.remove('active');
+    }
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const appShell = document.getElementById('app');
+    if (localStorage.getItem('mata-sidebar-collapsed') === 'true') {
+      appShell.classList.add('sidebar-collapsed');
+      sidebarToggle.setAttribute('aria-label', 'Expand sidebar');
+      sidebarToggle.setAttribute('title', 'Expand sidebar');
+      sidebarToggle.setAttribute('aria-expanded', 'false');
+    } else {
+      sidebarToggle.setAttribute('aria-expanded', 'true');
+    }
+    sidebarToggle.addEventListener('click', () => {
+      const collapsed = appShell.classList.toggle('sidebar-collapsed');
+      localStorage.setItem('mata-sidebar-collapsed', collapsed);
+      sidebarToggle.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+      sidebarToggle.setAttribute('title', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+      sidebarToggle.setAttribute('aria-expanded', String(!collapsed));
+    });
+    document.querySelectorAll('nav.tabs button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('view-' + btn.dataset.view).classList.add('active');
+        if (btn.dataset.view === 'overview' && map) setTimeout(() => map.invalidateSize(), 50);
+      });
+    });
+    setInterval(() => {
+      document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-PH', { hour12: false });
+    }, 1000);
+
+    /* ================= SETTINGS ================= */
+    let thresh = { kva: 25, vnom: 230, fnom: 60, overload: 70, underload: 40, tempwarn: 65, tempcrit: 105 };
+    function saveSettings() {
+      thresh.kva = +document.getElementById('set-kva').value;
+      thresh.vnom = +document.getElementById('set-vnom').value;
+      thresh.fnom = +document.getElementById('set-fnom').value;
+      thresh.overload = +document.getElementById('set-overload').value;
+      thresh.underload = +document.getElementById('set-underload').value;
+      thresh.tempwarn = +document.getElementById('set-tempwarn').value;
+      thresh.tempcrit = +document.getElementById('set-tempcrit').value;
+      const msg = document.getElementById('save-msg');
+      msg.classList.add('show');
+      setTimeout(() => msg.classList.remove('show'), 1800);
+      showToast('Settings saved');
+    }
+
+    /* ================= METRIC CARDS ================= */
+    const metrics = [
+      { key: 'v', label: 'VOLTAGE', unit: 'V' },
+      { key: 'i', label: 'CURRENT', unit: 'A' },
+      { key: 'temp', label: 'TEMPERATURE', unit: '°C' },
+      { key: 'kva', label: 'APPARENT POWER', unit: 'kVA' },
+      { key: 'load', label: 'LOAD', unit: '%' },
+      { key: 'pf', label: 'POWER FACTOR', unit: '' },
+    ];
+    const grid = document.getElementById('metric-grid');
+    metrics.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'metric-card';
+      div.id = 'card-' + m.key;
+      div.innerHTML = `<div class="m-label">${m.label}</div>
+    <div class="m-value"><span id="val-${m.key}">—</span><span class="m-unit">${m.unit}</span></div>
+    <div class="m-status" id="status-${m.key}">Normal</div>`;
+      grid.appendChild(div);
+    });
+
+    /* ================= MAP ================= */
+    const fleet = [
+      { id: 'MATA_001', name: 'MATA_001', lat: null, lng: null, state: 'crit' },
+    ];
+    let activeDeviceId = 'MATA_001';
+    let map, markers = {};
+    const stateColor = s => s === 'crit' ? '#D90429' : s === 'warn' ? '#FF6B6B' : '#F2F2F0';
+
+    function markerIcon(state, active) {
+      return L.divIcon({
+        className: '',
+        html: `<div class="mata-marker ${active ? 'pulse' : ''}" style="color:${stateColor(state)}; background:${stateColor(state)}; position:relative;"></div>`,
+        iconSize: [16, 16], iconAnchor: [8, 8]
+      });
+    }
+
+    function initMap() {
+      if (map) { map.invalidateSize(); return; }
+      map = L.map('map', { zoomControl: false, attributionControl: true }).setView([0, 0], 2);
+      L.control.zoom({ position: 'bottomleft' }).addTo(map);
+      map.on('click', event => {
+        if (manualPinMode && !userLocationLocked) {
+          setUserLocation(event.latlng.lat, event.latlng.lng, 'MANUAL PIN');
+          manualPinMode = false;
+          document.getElementById('manual-pin-button').classList.remove('active');
+        }
+      });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+      }).addTo(map);
+
+      fleet.forEach(dev => {
+        if (!Number.isFinite(dev.lat) || !Number.isFinite(dev.lng)) return;
+        const marker = L.marker([dev.lat, dev.lng], { icon: markerIcon(dev.state, dev.id === activeDeviceId) }).addTo(map);
+        marker.bindPopup(`
+      <div class="pop-name">${dev.name}</div>
+      <div class="pop-row"><span>Status</span><span>${dev.state.toUpperCase()}</span></div>
+      <div class="pop-row"><span>Lat / Lng</span><span>${dev.lat.toFixed(4)}, ${dev.lng.toFixed(4)}</span></div>
+    `);
+        markers[dev.id] = marker;
+      });
+      setTimeout(() => map.invalidateSize(), 200);
+    }
+
+    window.addEventListener('resize', () => { if (map) map.invalidateSize(); });
+
+    /* ================= SIMULATION ================= */
+    let t = 0;
+    let history = [];
+    let alerts = { total: 0, resolved: 0, warn: 0, crit: 0 };
+    let alertLog = [];
+    let maxDemand = 0, demandSum = 0, demandCount = 0;
+    let energyKWh = 0;
+    let simRunning = false;
+
+    function classify(s) {
+      if (s.temp >= thresh.tempcrit || s.load >= 100 || s.v <= 210 || s.v >= 250) return 'crit';
+      if (s.temp >= thresh.tempwarn || s.load >= thresh.overload || s.load < thresh.underload || s.v <= 220 || s.v >= 240) return 'warn';
+      return 'ok';
+    }
+
+    function fmt(n, d = 3) { return Number(n).toFixed(d); }
+
+    function updateMetricCard(key, value, unit, state, decimals) {
+      document.getElementById('val-' + key).textContent = fmt(value, 3);
+      const card = document.getElementById('card-' + key);
+      const statusEl = document.getElementById('status-' + key);
+      card.classList.remove('state-warn', 'state-crit');
+      if (state === 'crit') { card.classList.add('state-crit'); statusEl.textContent = 'Critical'; }
+      else if (state === 'warn') { card.classList.add('state-warn'); statusEl.textContent = 'Warning'; }
+      else { statusEl.textContent = 'Normal'; }
+    }
+
+    /* ---- charts ---- */
+    Chart.defaults.color = '#B7B7BC';
+    Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+    Chart.defaults.font.size = 10;
+    Chart.defaults.borderColor = '#34343B';
+
+    function baseOpts(extra = {}) {
+      return Object.assign({
+        responsive: true, animation: false,
+        plugins: { legend: { labels: { boxWidth: 10, font: { size: 10 } } } },
+        scales: {
+          x: { grid: { color: '#232328' }, ticks: { maxTicksLimit: 6 } },
+          y: { grid: { color: '#232328' } }
+        },
+        elements: { point: { radius: 0 }, line: { tension: 0.3, borderWidth: 1.6 } }
+      }, extra);
+    }
+
+    const chartVI = new Chart(document.getElementById('chart-vi'), {
+      type: 'line',
+      data: {
+        labels: [], datasets: [
+          { label: 'Voltage (V)', data: [], borderColor: '#E63946', yAxisID: 'y' },
+          { label: 'Current (A)', data: [], borderColor: '#F2F2F0', yAxisID: 'y1' }
+        ]
+      },
+      options: baseOpts({
+        scales: {
+          x: { grid: { color: '#232328' }, ticks: { maxTicksLimit: 6 } },
+          y: { position: 'left', grid: { color: '#232328' }, title: { display: true, text: 'V' } },
+          y1: { position: 'right', grid: { display: false }, title: { display: true, text: 'A' } }
+        }
+      })
+    });
+
+    const chartTemp = new Chart(document.getElementById('chart-temp'), {
+      type: 'line',
+      data: {
+        labels: [], datasets: [
+          { label: 'Temp (°C)', data: [], borderColor: '#D90429', backgroundColor: 'rgba(217,4,41,0.12)', fill: true }
+        ]
+      },
+      options: baseOpts({ plugins: { legend: { display: false } } })
+    });
+
+    const chartLoad = new Chart(document.getElementById('chart-load'), {
+      type: 'line',
+      data: {
+        labels: [], datasets: [
+          { label: 'Load %', data: [], borderColor: '#FF6B6B', backgroundColor: 'rgba(255,107,107,0.12)', fill: true }
+        ]
+      },
+      options: baseOpts({ plugins: { legend: { display: false } } })
+    });
+
+    const chartEnergy = new Chart(document.getElementById('chart-energy'), {
+      type: 'bar',
+      data: {
+        labels: [], datasets: [
+          { label: 'kWh', data: [], backgroundColor: '#E63946' }
+        ]
+      },
+      options: baseOpts({ plugins: { legend: { display: false } } })
+    });
+
+    function pushChart(chart, label, values, cap = 60) {
+      chart.data.labels.push(label);
+      values.forEach((v, idx) => chart.data.datasets[idx].data.push(v));
+      if (chart.data.labels.length > cap) {
+        chart.data.labels.shift();
+        chart.data.datasets.forEach(ds => ds.data.shift());
+      }
+      chart.update('none');
+    }
+
+    /* ---- alerts ---- */
+    function pushAlert(sample, state, reason) {
+      alerts.total++;
+      if (state === 'crit') alerts.crit++; else alerts.warn++;
+      const timeStr = sample.t.toLocaleTimeString('en-PH', { hour12: false });
+      alertLog.unshift({ time: timeStr, state, reason });
+      if (alertLog.length > 40) alertLog.pop();
+      renderAlertLog();
+      // auto-resolve after a short delay, purely cosmetic
+      setTimeout(() => { alerts.resolved++; document.getElementById('al-resolved').textContent = alerts.resolved; }, 6000);
+      document.getElementById('al-total').textContent = alerts.total;
+      document.getElementById('al-warn').textContent = alerts.warn;
+      document.getElementById('al-crit').textContent = alerts.crit;
+    }
+    function renderAlertLog() {
+      const el = document.getElementById('alert-log');
+      if (alertLog.length === 0) { el.innerHTML = '<div style="color:var(--text-faint); font-size:12px;">No alerts recorded yet.</div>'; return; }
+      el.innerHTML = alertLog.map(a => `
+    <div class="log-entry ${a.state === 'crit' ? 'crit' : ''}">
+      <div class="time">${a.time}</div>
+      <div class="badge">${a.state === 'crit' ? 'CRITICAL' : 'WARNING'}</div>
+      <div>${a.reason}</div>
+    </div>`).join('');
+    }
+
+    let lastState = 'ok';
+    function evaluateAlert(sample, state) {
+      if (state !== 'ok' && state !== lastState) {
+        let reason = [];
+        if (sample.temp >= thresh.tempwarn) reason.push(`winding temp ${fmt(sample.temp)}°C`);
+        if (sample.load >= thresh.overload) reason.push(`load ${fmt(sample.load, 0)}% (overload)`);
+        if (sample.load < thresh.underload) reason.push(`load ${fmt(sample.load, 0)}% (underload)`);
+        if (sample.v <= 220 || sample.v >= 240) reason.push(`voltage ${fmt(sample.v)}V out of band`);
+        pushAlert(sample, state, reason.join(', ') || 'threshold exceeded');
+      }
+      lastState = state;
+    }
+
+    /* ---- analysis text ---- */
+    function updateAnalysis() {
+      if (history.length < 5) return;
+      const recent = history.slice(-15);
+      const avgLoad = recent.reduce((a, s) => a + s.load, 0) / recent.length;
+      const avgTemp = recent.reduce((a, s) => a + s.temp, 0) / recent.length;
+      const trendLoad = recent[recent.length - 1].load - recent[0].load;
+      const lines = [];
+      lines.push(`Average load over last ${recent.length} samples: <span class="${avgLoad > thresh.overload ? 'flag-warn' : 'flag-good'}">${fmt(avgLoad, 1)}%</span> of rated ${thresh.kva} kVA.`);
+      lines.push(`Load trend: ${trendLoad > 3 ? 'rising' : trendLoad < -3 ? 'falling' : 'stable'} (${trendLoad >= 0 ? '+' : ''}${fmt(trendLoad, 1)} pts).`);
+      lines.push(`Average winding temperature: <span class="${avgTemp > thresh.tempwarn ? 'flag-warn' : 'flag-good'}">${fmt(avgTemp, 1)}°C</span>.`);
+      lines.push(`Power factor holding near ${fmt(recent[recent.length - 1].pf, 2)} — ${recent[recent.length - 1].pf < 0.9 ? 'below recommended 0.90' : 'within acceptable range'}.`);
+      document.getElementById('analysis-text').innerHTML = lines.join('<br>');
+    }
+
+    /* ---- history table ---- */
+    function addHistoryRow(sample, state) {
+      const tbody = document.getElementById('history-body');
+      const tr = document.createElement('tr');
+      const statusClass = state === 'crit' ? 'crit' : state === 'warn' ? 'warn' : 'ok';
+      const statusText = state === 'crit' ? 'CRITICAL' : state === 'warn' ? 'WARNING' : 'OK';
+      tr.innerHTML = `<td>${sample.t.toLocaleTimeString('en-PH', { hour12: false })}</td>
+      <td>${fmt(sample.v, 3)}</td><td>${fmt(sample.i, 3)}</td><td>${fmt(sample.temp, 3)}</td>
+    <td>${fmt(sample.kva, 3)}</td><td>${fmt(sample.load, 3)}</td><td>${fmt(sample.pf, 3)}</td>
+    <td>${fmt(sample.p, 3)}</td><td>${fmt(sample.freq, 3)}</td>
+    <td class="status-cell ${statusClass}">${statusText}</td>`;
+      tbody.prepend(tr);
+      while (tbody.children.length > 300) tbody.removeChild(tbody.lastChild);
+      document.getElementById('history-count').textContent = history.length + ' records';
+    }
+
+    function exportCSV() {
+      let csv = 'Time,Voltage,Current,Temp,kVA,Load%,PF,kW,Freq,Status\n';
+      history.forEach(s => {
+        const state = classify(s);
+        csv += `${s.t.toLocaleTimeString('en-PH', { hour12: false })},${fmt(s.v, 3)},${fmt(s.i, 3)},${fmt(s.temp, 3)},${fmt(s.kva, 3)},${fmt(s.load, 3)},${fmt(s.pf, 3)},${fmt(s.p, 3)},${fmt(s.freq, 3)},${state}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'mata_history_log.csv'; a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Exported ${history.length} records to CSV`);
+    }
+
+    function renderSensorError(message) {
+      ['v', 'i', 'temp', 'kva', 'load', 'pf'].forEach(key => {
+        document.getElementById('val-' + key).textContent = 'ERR';
+        const card = document.getElementById('card-' + key);
+        card.classList.remove('state-warn');
+        card.classList.add('state-crit');
+        document.getElementById('status-' + key).textContent = 'Sensor error';
+      });
+      ['kv-s', 'kv-p', 'kv-q', 'kv-maxdemand', 'kv-avgdemand'].forEach(id => {
+        document.getElementById(id).textContent = 'ERR';
+      });
+      document.getElementById('kv-loadstatus').textContent = 'Sensor error';
+      document.getElementById('kv-loadstatus').style.color = 'var(--crit)';
+      document.getElementById('gauge-load-num').textContent = 'ERR';
+      document.getElementById('gauge-load-fill').style.width = '0%';
+      document.getElementById('gauge-load-fill').style.background = 'var(--crit)';
+      document.getElementById('overview-meta').textContent = message;
+      document.getElementById('analysis-text').textContent = message;
+    }
+
+    /* ---- live telemetry renderer ---- */
+    function renderSensorError(message) {
+      ['v', 'i', 'temp', 'kva', 'load', 'pf'].forEach(key => {
+        document.getElementById('val-' + key).textContent = 'ERR';
+        document.getElementById('card-' + key).classList.add('state-crit');
+        document.getElementById('status-' + key).textContent = 'Sensor error';
+      });
+      ['kv-s', 'kv-p', 'kv-q', 'kv-maxdemand', 'kv-avgdemand'].forEach(id => {
+        document.getElementById(id).textContent = 'ERR';
+      });
+      document.getElementById('kv-loadstatus').textContent = 'Sensor error';
+      document.getElementById('kv-loadstatus').style.color = 'var(--crit)';
+      document.getElementById('gauge-load-num').textContent = 'ERR';
+      document.getElementById('gauge-load-fill').style.width = '0%';
+      document.getElementById('gauge-load-fill').style.background = 'var(--crit)';
+      document.getElementById('overview-meta').textContent = message;
+      document.getElementById('analysis-text').textContent = message;
+    }
+
+    function tick(sample) {
+      if (!sample || ![sample.v, sample.i, sample.temp, sample.kva, sample.load, sample.pf, sample.p, sample.q, sample.freq].every(Number.isFinite)) {
+        renderSensorError('Incomplete sensor readings');
+        return;
+      }
+      const s = sample;
+      t += 1;
+      history.push(s);
+      if (history.length > 500) history.shift();
+      const state = classify(s);
+
+      updateMetricCard('v', s.v, 'V', (s.v <= 220 || s.v >= 240) ? 'warn' : 'ok', 1);
+      updateMetricCard('i', s.i, 'A', 'ok', 1);
+      updateMetricCard('temp', s.temp, '°C', s.temp >= thresh.tempcrit ? 'crit' : s.temp >= thresh.tempwarn ? 'warn' : 'ok', 1);
+      updateMetricCard('kva', s.kva, 'kVA', 'ok', 2);
+      updateMetricCard('load', s.load, '%', s.load >= 100 ? 'crit' : (s.load >= thresh.overload || s.load < thresh.underload) ? 'warn' : 'ok', 0);
+      updateMetricCard('pf', s.pf, '', s.pf < 0.85 ? 'warn' : 'ok', 2);
+
+      document.getElementById('kv-loadstatus').textContent = state === 'ok' ? 'Normal' : state === 'warn' ? 'Warning' : 'Critical';
+      document.getElementById('kv-loadstatus').style.color = state === 'ok' ? 'var(--good)' : state === 'warn' ? 'var(--warn)' : 'var(--crit)';
+      document.getElementById('kv-s').textContent = fmt(s.kva, 3) + ' kVA';
+      document.getElementById('kv-p').textContent = fmt(s.p, 3) + ' kW';
+      document.getElementById('kv-q').textContent = fmt(s.q, 3) + ' kVAR';
+      maxDemand = Math.max(maxDemand, s.kva);
+      demandSum += s.kva; demandCount++;
+      document.getElementById('kv-maxdemand').textContent = fmt(maxDemand, 3) + ' kVA';
+      document.getElementById('kv-avgdemand').textContent = fmt(demandSum / demandCount, 3) + ' kVA';
+
+      document.getElementById('gauge-load-num').innerHTML = fmt(s.load, 0) + '<small>%</small>';
+      const fillPct = Math.min(100, s.load);
+      const fillEl = document.getElementById('gauge-load-fill');
+      fillEl.style.width = fillPct + '%';
+      fillEl.style.background = state === 'crit' ? 'var(--crit)' : state === 'warn' ? 'var(--warn)' : 'var(--good)';
+
+      const timeLbl = s.t.toLocaleTimeString('en-PH', { hour12: false, minute: '2-digit', second: '2-digit' });
+      pushChart(chartVI, timeLbl, [s.v, s.i]);
+      pushChart(chartTemp, timeLbl, [s.temp]);
+      pushChart(chartLoad, timeLbl, [s.load]);
+
+      energyKWh += (s.p * (2 / 3600)); // 2s tick -> kWh increment
+      if (t % 5 === 0) {
+        pushChart(chartEnergy, timeLbl, [Number(energyKWh.toFixed(3))], 20);
+      }
+
+      addHistoryRow(s, state);
+      evaluateAlert(s, state);
+      if (t % 5 === 0) updateAnalysis();
+
+      // reflect live state on the active device's map marker
+      const dev = fleet.find(d => d.id === activeDeviceId);
+      if (dev) {
+        dev.state = state;
+        if (markers[dev.id]) {
+          markers[dev.id].setIcon(markerIcon(state, true));
+          markers[dev.id].setPopupContent(`
+        <div class="pop-name">${dev.name}</div>
+        <div class="pop-row"><span>Status</span><span>${state.toUpperCase()}</span></div>
+        <div class="pop-row"><span>Load</span><span>${fmt(s.load, 0)}%</span></div>
+        <div class="pop-row"><span>Temp</span><span>${fmt(s.temp, 1)}°C</span></div>
+      `);
+        }
+      }
+    }
+
+    let backendLastTs = null;
+    const numberOrNaN = value => value == null ? NaN : Number(value);
+
+    function sampleFromReading(row) {
+      return {
+        t: new Date(row.ts),
+        v: numberOrNaN(row.voltage_v),
+        i: numberOrNaN(row.current_a),
+        temp: numberOrNaN(row.temperature_c),
+        kva: row.apparent_power_kva == null ? numberOrNaN(row.apparent_power_va) / 1000 : Number(row.apparent_power_kva),
+        load: numberOrNaN(row.utilization_pct),
+        pf: numberOrNaN(row.power_factor),
+        p: numberOrNaN(row.active_power_w) / 1000,
+        q: numberOrNaN(row.reactive_power_var) / 1000,
+        freq: numberOrNaN(row.frequency_hz)
+      };
+    }
+
+    async function updateMapLocation() {
+      const { data: gps } = await mataSupabase
+        .from('gps_log')
+        .select('latitude, longitude')
+        .eq('device_id', MATA_DEVICE_ID)
+        .order('ts', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const device = fleet.find(item => item.id === MATA_DEVICE_ID);
+      const hasGps = gps && Number.isFinite(Number(gps.latitude)) && Number.isFinite(Number(gps.longitude));
+      const location = hasGps
+        ? { latitude: Number(gps.latitude), longitude: Number(gps.longitude), label: 'GPS FIXED' }
+        : null;
+
+      document.getElementById('kv-gpsstatus').textContent = hasGps ? 'Fixed' : 'No fix';
+      document.getElementById('kv-gpsstatus').style.color = hasGps ? 'var(--good)' : 'var(--warn)';
+      document.getElementById('map-location-source').textContent = location ? location.label : 'Location unavailable';
+      if (!device || !location) return;
+
+      device.lat = location.latitude;
+      device.lng = location.longitude;
+      if (markers[device.id]) {
+        markers[device.id].setLatLng([device.lat, device.lng]);
+        markers[device.id].setPopupContent(`<div class="pop-name">${device.name}</div><div class="pop-row"><span>Source</span><span>${location.label}</span></div>`);
+      } else if (map) {
+        const marker = L.marker([device.lat, device.lng], { icon: markerIcon(device.state, true) }).addTo(map);
+        marker.bindPopup(`<div class="pop-name">${device.name}</div><div class="pop-row"><span>Source</span><span>${location.label}</span></div>`);
+        markers[device.id] = marker;
+      }
+      if (map) map.setView([device.lat, device.lng], 11);
+    }
+
+    function setUserLocation(latitude, longitude, source) {
+      if (userLocationLocked || !map) return;
+      if (!userLocationMarker) {
+        userLocationMarker = L.circleMarker([latitude, longitude], {
+          radius: 8, color: '#FFFFFF', weight: 3, fillColor: '#E63946', fillOpacity: 1
+        }).addTo(map);
+      } else {
+        userLocationMarker.setLatLng([latitude, longitude]);
+      }
+      userLocationMarker.bindPopup(`<div class="pop-name">Your location</div><div class="pop-row"><span>Source</span><span>${source}</span></div>`);
+      userLocationMarker.openPopup();
+      map.panTo([latitude, longitude]);
+      showToast('Your location pinned');
+    }
+
+    function autoPinLocation() {
+      if (!navigator.geolocation) {
+        showToast('Location services are unavailable');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        position => setUserLocation(position.coords.latitude, position.coords.longitude, 'DEVICE GPS'),
+        () => showToast('Unable to detect your location'),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    function toggleManualPin() {
+      if (userLocationLocked) return;
+      manualPinMode = !manualPinMode;
+      document.getElementById('manual-pin-button').classList.toggle('active', manualPinMode);
+      showToast(manualPinMode ? 'Click the map to place your pin' : 'Manual pin cancelled');
+    }
+
+    function togglePinLock() {
+      userLocationLocked = !userLocationLocked;
+      const button = document.getElementById('pin-lock-button');
+      button.classList.toggle('active', userLocationLocked);
+      button.querySelector('.lock-icon').classList.toggle('locked', userLocationLocked);
+      button.setAttribute('aria-label', userLocationLocked ? 'Unlock location pin' : 'Lock location pin');
+      button.setAttribute('title', userLocationLocked ? 'Unlock location pin' : 'Lock location pin');
+      showToast(userLocationLocked ? 'Location pin locked' : 'Location pin unlocked');
+    }
+
+    function toggleCoordinateForm() {
+      if (userLocationLocked) return;
+      document.getElementById('coordinate-form').classList.toggle('visible');
+    }
+
+    function applyCoordinatePin(event) {
+      event.preventDefault();
+      const latitude = Number(document.getElementById('pin-latitude').value);
+      const longitude = Number(document.getElementById('pin-longitude').value);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+        showToast('Enter valid coordinates');
+        return;
+      }
+      setUserLocation(latitude, longitude, 'MANUAL COORDINATES');
+      document.getElementById('coordinate-form').classList.remove('visible');
+    }
+
+    document.getElementById('auto-pin-button').addEventListener('click', autoPinLocation);
+    document.getElementById('manual-pin-button').addEventListener('click', toggleManualPin);
+    document.getElementById('coordinate-pin-button').addEventListener('click', toggleCoordinateForm);
+    document.getElementById('pin-lock-button').addEventListener('click', togglePinLock);
+    document.getElementById('coordinate-form').addEventListener('submit', applyCoordinatePin);
+
+    function resetBackendCharts() {
+      [chartVI, chartTemp, chartLoad, chartEnergy].forEach(chart => {
+        chart.data.labels = [];
+        chart.data.datasets.forEach(dataset => { dataset.data = []; });
+        chart.update('none');
+      });
+      document.getElementById('history-body').innerHTML = '';
+      history = [];
+      t = 0;
+      lastState = 'ok';
+    }
+
+    async function refreshBackend(force = false) {
+      const { data, error } = await mataSupabase
+        .from('readings')
+        .select('*')
+        .eq('device_id', MATA_DEVICE_ID)
+        .order('ts', { ascending: false })
+        .limit(60);
+      if (error) throw error;
+      if (!data || !data.length) throw new Error('No readings found for ' + MATA_DEVICE_ID);
+
+      const newest = data[0];
+      const receivedAt = new Date(newest.created_at || newest.ts);
+      const readingAge = Date.now() - receivedAt.getTime();
+      if (!Number.isFinite(readingAge) || readingAge > MAX_READING_AGE_MS || readingAge < -MAX_READING_AGE_MS) {
+        backendLastTs = newest.ts;
+        resetBackendCharts();
+        renderSensorError('Device offline — no recent sensor readings');
+        document.getElementById('conn-label').textContent = 'STALE';
+        throw new Error('Telemetry is not recent');
+      }
+      const hasNewReading = backendLastTs !== newest.ts;
+      if (!hasNewReading && !force) return;
+      if (!backendLastTs) {
+        resetBackendCharts();
+        data.slice().reverse().forEach(row => tick(sampleFromReading(row)));
+      } else if (hasNewReading) {
+        tick(sampleFromReading(newest));
+      }
+      backendLastTs = newest.ts;
+      document.getElementById('overview-meta').textContent = 'Last reading ' + receivedAt.toLocaleString('en-PH');
+
+      await updateMapLocation();
+      document.getElementById('conn-label').textContent = 'LIVE · SUPABASE';
+    }
+
+    async function refreshReadings() {
+      if (!mataSupabase || refreshButton.disabled) return;
+      refreshButton.disabled = true;
+      refreshButton.classList.add('is-refreshing');
+      try {
+        await refreshBackend(true);
+        showToast('Readings refreshed from sensors');
+      } catch (error) {
+        document.getElementById('conn-label').textContent = 'ERROR';
+        showToast('Unable to refresh readings');
+      } finally {
+        refreshButton.disabled = false;
+        refreshButton.classList.remove('is-refreshing');
+      }
+    }
+
+    refreshButton.addEventListener('click', refreshReadings);
+
+    async function startTelemetry() {
+      if (simRunning) return;
+      simRunning = true;
+      if (mataSupabase) {
+        try {
+          backendMode = true;
+          await refreshBackend();
+          if (!accessRefreshNoticeShown) {
+            showToast('Readings refreshed from sensors');
+            accessRefreshNoticeShown = true;
+          }
+          backendTimer = setInterval(() => refreshBackend().catch(() => {
+            document.getElementById('conn-label').textContent = 'STALE';
+          }), 10000);
+          return;
+        } catch (error) {
+          console.warn('Supabase telemetry unavailable.', error);
+          document.getElementById('conn-label').textContent = 'ERROR';
+          if (error.message !== 'Telemetry is not recent') {
+            renderSensorError('No sensor readings available');
+          }
+          backendTimer = setInterval(() => refreshBackend()
+            .then(() => {
+              if (!accessRefreshNoticeShown) {
+                showToast('Readings refreshed from sensors');
+                accessRefreshNoticeShown = true;
+              }
+            })
+            .catch(() => {
+              document.getElementById('conn-label').textContent = 'ERROR';
+            }), 10000);
+        }
+      }
+      else {
+        document.getElementById('conn-label').textContent = 'ERROR';
+        renderSensorError('Supabase is not configured');
+      }
+    }
+  </script>
+</body>
+
+</html>
