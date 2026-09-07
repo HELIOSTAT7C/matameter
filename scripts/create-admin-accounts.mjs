@@ -35,20 +35,30 @@ async function supabaseRequest(path, options = {}) {
 
 await supabaseRequest('/rest/v1/admin_profiles?select=user_id&limit=1');
 
+const usersResponse = await supabaseRequest('/auth/v1/admin/users?per_page=1000');
+const existingUsers = new Map((usersResponse.users || []).map(user => [user.email, user]));
+
 for (const admin of adminUsers) {
-    const user = await supabaseRequest('/auth/v1/admin/users', {
-        method: 'POST',
-        body: JSON.stringify({
-            email: admin.email,
-            password: admin.pin,
-            email_confirm: true,
-            user_metadata: {
-                display_name: admin.display_name,
-                role: 'admin'
-            },
-            app_metadata: { role: 'admin' }
+    const userPayload = {
+        email: admin.email,
+        password: admin.pin,
+        email_confirm: true,
+        user_metadata: {
+            display_name: admin.display_name,
+            role: 'admin'
+        },
+        app_metadata: { role: 'admin' }
+    };
+    const existingUser = existingUsers.get(admin.email);
+    const user = existingUser
+        ? await supabaseRequest(`/auth/v1/admin/users/${existingUser.id}`, {
+            method: 'PUT',
+            body: JSON.stringify(userPayload)
         })
-    });
+        : await supabaseRequest('/auth/v1/admin/users', {
+            method: 'POST',
+            body: JSON.stringify(userPayload)
+        });
 
     await supabaseRequest('/rest/v1/admin_profiles', {
         method: 'POST',
