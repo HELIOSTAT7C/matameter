@@ -33,6 +33,8 @@ async function supabaseRequest(path, options = {}) {
     return body;
 }
 
+await supabaseRequest('/rest/v1/admin_profiles?select=user_id&limit=1');
+
 for (const admin of adminUsers) {
     const user = await supabaseRequest('/auth/v1/admin/users', {
         method: 'POST',
