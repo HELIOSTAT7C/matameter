@@ -33,6 +33,15 @@ generated six-digit PIN and the requested display name `mata@csu-c.ee_1` through
 `mata@csu-c.ee_5`. Save the one-time command output securely. Never commit the
 service-role key or PINs, and never place the service-role key in the dashboard.
 
+To add only admin number 6 later without changing the existing accounts:
+
+```powershell
+$env:MATA_ADMIN_START = "6"
+$env:MATA_ADMIN_COUNT = "1"
+node scripts/create-admin-accounts.mjs
+Remove-Item Env:MATA_ADMIN_START, Env:MATA_ADMIN_COUNT
+```
+
 If the Supabase project enforces a password minimum longer than six characters,
 set the Auth password minimum to six characters before running the provisioning
 script, since the requested PINs are six digits.

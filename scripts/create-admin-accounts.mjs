@@ -2,13 +2,19 @@ import { randomInt } from 'node:crypto';
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://dyukzahnxtmusfksqdfn.supabase.co';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const adminStart = Number(process.env.MATA_ADMIN_START || 1);
+const adminCount = Number(process.env.MATA_ADMIN_COUNT || 5);
 
 if (!serviceRoleKey) {
     throw new Error('Set SUPABASE_SERVICE_ROLE_KEY before creating admin accounts.');
 }
 
-const adminUsers = Array.from({ length: 5 }, (_, index) => {
-    const number = index + 1;
+if (!Number.isInteger(adminStart) || adminStart < 1 || !Number.isInteger(adminCount) || adminCount < 1) {
+    throw new Error('MATA_ADMIN_START and MATA_ADMIN_COUNT must be positive integers.');
+}
+
+const adminUsers = Array.from({ length: adminCount }, (_, index) => {
+    const number = adminStart + index;
     return {
         email: `mata+admin${number}@csu-c.ee`,
         display_name: `mata@csu-c.ee_${number}`,
