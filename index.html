@@ -171,6 +171,15 @@
       text-align: center;
     }
 
+    .login-error {
+      min-height: 16px;
+      margin-top: 12px;
+      color: var(--warn);
+      font-size: 11px;
+      line-height: 1.4;
+      text-align: center;
+    }
+
     /* ---------- APP SHELL ---------- */
     #app {
       display: none;
@@ -1525,17 +1534,19 @@
         </div>
       </div>
       <h1>Sign in</h1>
-      <p>Restricted to authorized cooperative operators. This is a demo build — any credentials will work.</p>
+      <p>Restricted to authorized cooperative operators. Sign in with your Supabase Auth account.</p>
       <div class="field">
-        <label>EMAIL</label>
-        <input type="text" id="login-email" placeholder="operator@cagelco.ph" value="demo@cagelco.ph">
+        <label for="login-email">EMAIL</label>
+        <input type="email" id="login-email" placeholder="operator@cagelco.ph" autocomplete="username">
       </div>
       <div class="field">
-        <label>PASSWORD</label>
-        <input type="password" id="login-pass" placeholder="••••••••" value="demo1234">
+        <label for="login-pass">PASSWORD / PIN</label>
+        <input type="password" id="login-pass" placeholder="Enter your PIN" autocomplete="current-password"
+          inputmode="numeric" minlength="6">
       </div>
-      <button class="btn-primary" onclick="doLogin()">Sign In</button>
-      <div class="login-foot">MATAMETER v3.0 — demo build, not connected to live hardware</div>
+      <button class="btn-primary" id="login-button" type="button">Sign In</button>
+      <div class="login-error" id="login-error" role="alert" aria-live="polite"></div>
+      <div class="login-foot">MATAMETER v3.0 — authenticated telemetry access</div>
     </div>
   </div>
 
@@ -1901,15 +1912,81 @@
     }
 
     /* ================= AUTH / NAV ================= */
-    function doLogin() {
+    let telemetryStarted = false;
+
+    function setLoginBusy(isBusy) {
+      const button = document.getElementById('login-button');
+      button.disabled = isBusy;
+      button.textContent = isBusy ? 'Signing In…' : 'Sign In';
+    }
+
+    function showLoginError(message) {
+      document.getElementById('login-error').textContent = message;
+    }
+
+    function showAuthenticatedApp() {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('app').classList.add('active');
-      startTelemetry();
-      setTimeout(initMap, 50);
+      if (!telemetryStarted) {
+        telemetryStarted = true;
+        startTelemetry();
+        setTimeout(initMap, 50);
+      }
     }
-    function doLogout() {
+
+    function showLoggedOutApp() {
+      if (backendTimer) {
+        clearInterval(backendTimer);
+        backendTimer = null;
+      }
+      simRunning = false;
+      telemetryStarted = false;
       document.getElementById('login-screen').style.display = 'flex';
       document.getElementById('app').classList.remove('active');
+    }
+
+    async function doLogin() {
+      if (!mataSupabase) {
+        showLoginError('Supabase authentication is unavailable. Check the dashboard configuration.');
+        return;
+      }
+
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-pass').value;
+      if (!email || !password) {
+        showLoginError('Enter your email and password / PIN.');
+        return;
+      }
+
+      setLoginBusy(true);
+      showLoginError('');
+      const { error } = await mataSupabase.auth.signInWithPassword({ email, password });
+      setLoginBusy(false);
+      if (error) {
+        showLoginError('Sign-in failed. Check your credentials and try again.');
+        return;
+      }
+      document.getElementById('login-pass').value = '';
+    }
+
+    async function doLogout() {
+      if (mataSupabase) await mataSupabase.auth.signOut();
+      showLoggedOutApp();
+    }
+
+    document.getElementById('login-button').addEventListener('click', doLogin);
+    document.getElementById('login-pass').addEventListener('keydown', event => {
+      if (event.key === 'Enter') doLogin();
+    });
+
+    if (mataSupabase) {
+      mataSupabase.auth.onAuthStateChange((_event, session) => {
+        if (session) showAuthenticatedApp();
+        else showLoggedOutApp();
+      });
+      mataSupabase.auth.getSession().then(({ data }) => {
+        if (data.session) showAuthenticatedApp();
+      });
     }
     const sidebarToggle = document.getElementById('sidebar-toggle');
     const appShell = document.getElementById('app');

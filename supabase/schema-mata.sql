@@ -54,6 +54,37 @@ create table if not exists public.gps_status (
 create index if not exists readings_device_ts_idx on public.readings (device_id, ts desc);
 create index if not exists gps_log_device_ts_idx on public.gps_log (device_id, ts desc);
 
+-- Dashboard operators are managed in Supabase Auth. This table stores only
+-- authorization metadata; passwords and PINs remain managed by Auth.
+create table if not exists public.admin_profiles (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  email text not null unique,
+  display_name text not null,
+  role text not null default 'admin' check (role = 'admin'),
+  created_at timestamptz not null default now()
+);
+
+alter table public.admin_profiles enable row level security;
+
+create or replace function public.is_mata_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.admin_profiles
+    where user_id = auth.uid()
+      and role = 'admin'
+  );
+$$;
+
+revoke all on public.admin_profiles from anon;
+revoke all on public.admin_profiles from authenticated;
+grant execute on function public.is_mata_admin() to authenticated;
+
 alter table public.readings enable row level security;
 alter table public.device_status enable row level security;
 alter table public.gps_log enable row level security;
@@ -67,33 +98,35 @@ begin
   if not exists (select 1 from pg_policies where tablename = 'readings' and policyname = 'MATA anon insert readings') then
     create policy "MATA anon insert readings" on public.readings for insert to anon with check (true);
   end if;
-  if not exists (select 1 from pg_policies where tablename = 'readings' and policyname = 'MATA anon read readings') then
-    create policy "MATA anon read readings" on public.readings for select to anon using (true);
-  end if;
+  drop policy if exists "MATA anon read readings" on public.readings;
+  drop policy if exists "MATA admin read readings" on public.readings;
+  create policy "MATA admin read readings" on public.readings for select to authenticated using (public.is_mata_admin());
   if not exists (select 1 from pg_policies where tablename = 'device_status' and policyname = 'MATA anon write device status') then
     create policy "MATA anon write device status" on public.device_status for insert to anon with check (true);
   end if;
-  if not exists (select 1 from pg_policies where tablename = 'device_status' and policyname = 'MATA anon read device status') then
-    create policy "MATA anon read device status" on public.device_status for select to anon using (true);
-  end if;
+  drop policy if exists "MATA anon read device status" on public.device_status;
+  drop policy if exists "MATA admin read device status" on public.device_status;
+  create policy "MATA admin read device status" on public.device_status for select to authenticated using (public.is_mata_admin());
   if not exists (select 1 from pg_policies where tablename = 'device_status' and policyname = 'MATA anon update device status') then
     create policy "MATA anon update device status" on public.device_status for update to anon using (true) with check (true);
   end if;
   if not exists (select 1 from pg_policies where tablename = 'gps_log' and policyname = 'MATA anon insert gps log') then
     create policy "MATA anon insert gps log" on public.gps_log for insert to anon with check (true);
   end if;
-  if not exists (select 1 from pg_policies where tablename = 'gps_log' and policyname = 'MATA anon read gps log') then
-    create policy "MATA anon read gps log" on public.gps_log for select to anon using (true);
-  end if;
+  drop policy if exists "MATA anon read gps log" on public.gps_log;
+  drop policy if exists "MATA admin read gps log" on public.gps_log;
+  create policy "MATA admin read gps log" on public.gps_log for select to authenticated using (public.is_mata_admin());
   if not exists (select 1 from pg_policies where tablename = 'gps_status' and policyname = 'MATA anon write gps status') then
     create policy "MATA anon write gps status" on public.gps_status for insert to anon with check (true);
   end if;
-  if not exists (select 1 from pg_policies where tablename = 'gps_status' and policyname = 'MATA anon read gps status') then
-    create policy "MATA anon read gps status" on public.gps_status for select to anon using (true);
-  end if;
+  drop policy if exists "MATA anon read gps status" on public.gps_status;
+  drop policy if exists "MATA admin read gps status" on public.gps_status;
+  create policy "MATA admin read gps status" on public.gps_status for select to authenticated using (public.is_mata_admin());
   if not exists (select 1 from pg_policies where tablename = 'gps_status' and policyname = 'MATA anon update gps status') then
     create policy "MATA anon update gps status" on public.gps_status for update to anon using (true) with check (true);
   end if;
 end $$;
 
-grant select, insert, update on public.readings, public.device_status, public.gps_log, public.gps_status to anon;
+revoke select on public.readings, public.device_status, public.gps_log, public.gps_status from anon;
+grant select on public.readings, public.device_status, public.gps_log, public.gps_status to authenticated;
+grant insert, update on public.readings, public.device_status, public.gps_log, public.gps_status to anon;
