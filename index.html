@@ -443,16 +443,58 @@
       left: 234px;
       right: 14px;
       bottom: 14px;
-      height: 11vh;
-      min-height: 82px;
+      min-height: 104px;
       padding: 14px 20px;
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
+      gap: 24px;
+      max-height: 180px;
+      overflow: hidden;
       background: rgba(21, 21, 24, .78);
       border: 1px solid var(--glass-border);
-      border-radius: 8px;
+      border-radius: 12px;
       box-shadow: 0 -8px 24px rgba(0, 0, 0, .28);
       backdrop-filter: blur(24px) saturate(140%);
       -webkit-backdrop-filter: blur(24px) saturate(140%);
-      transition: left .32s cubic-bezier(.22, .61, .36, 1), background .2s ease;
+      transition: left .32s cubic-bezier(.22, .61, .36, 1), max-height .32s ease, padding .32s ease, background .2s ease;
+    }
+
+    .loading-bar-meter {
+      min-width: 0;
+    }
+
+    .loading-condition {
+      min-width: 0;
+      border-left: 1px solid var(--line);
+      padding-left: 20px;
+      border-radius: 8px;
+      transition: max-height .32s ease, opacity .24s ease, padding .32s ease, border-color .32s ease;
+      max-height: 80px;
+    }
+
+    .loading-condition-title {
+      color: var(--text-dim);
+      font: 600 10px var(--font-mono);
+      letter-spacing: .35px;
+      text-transform: uppercase;
+      margin-bottom: 9px;
+    }
+
+    .loading-condition-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px 14px;
+      color: var(--text-faint);
+      font: 10px var(--font-mono);
+    }
+
+    .loading-condition-grid strong {
+      display: block;
+      margin-top: 3px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
     }
 
     #app.sidebar-collapsed .loading-bar-panel {
@@ -464,6 +506,63 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 12px;
+    }
+
+    .loading-bar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-right: 38px;
+    }
+
+    .loading-panel-toggle {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--text-dim);
+      font: 500 18px/1 var(--font-ui);
+      cursor: pointer;
+    }
+
+    .loading-panel-toggle:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .loading-bar-panel.minimized {
+      min-height: 0;
+      max-height: 62px;
+      padding-top: 8px;
+      padding-bottom: 8px;
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .loading-bar-panel.minimized .loading-bar-head {
+      margin-bottom: 0;
+    }
+
+    .loading-bar-panel.minimized .loading-bar-track {
+      height: 9px;
+    }
+
+    .loading-bar-panel.minimized .loading-bar-scale {
+      display: none;
+    }
+
+    .loading-bar-panel.minimized .loading-condition {
+      max-height: 0;
+      opacity: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-color: transparent;
+      pointer-events: none;
     }
 
     .loading-bar-head h3 {
@@ -1027,6 +1126,125 @@
       color: var(--warn);
     }
 
+    .analysis-toolbar {
+      display: flex;
+      align-items: end;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+    }
+
+    .analysis-toolbar label {
+      display: grid;
+      gap: 5px;
+      color: var(--text-dim);
+      font: 10px var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .analysis-toolbar input {
+      min-height: 32px;
+      padding: 6px 8px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--text);
+      font: 11px var(--font-mono);
+    }
+
+    .analysis-toolbar input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .analysis-toolbar .btn-ghost {
+      min-height: 32px;
+    }
+
+    .danger-action {
+      margin-left: auto;
+      color: var(--warn);
+    }
+
+    .analysis-subhead {
+      margin-top: 20px;
+    }
+
+    .analysis-cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .analysis-card {
+      min-height: 92px;
+      padding: 12px 14px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-left: 3px solid var(--good);
+      border-radius: 10px;
+      box-shadow: inset 0 1px 0 var(--glass-highlight), 0 10px 24px rgba(0, 0, 0, .16);
+    }
+
+    .analysis-card.warn {
+      border-left-color: var(--warn);
+    }
+
+    .analysis-card.crit {
+      border-left-color: var(--crit);
+    }
+
+    .analysis-card .label {
+      color: var(--text-dim);
+      font-size: 10px;
+      letter-spacing: .25px;
+    }
+
+    .analysis-card .value {
+      display: block;
+      margin-top: 9px;
+      font: 600 19px var(--font-mono);
+    }
+
+    .analysis-card .note {
+      display: block;
+      margin-top: 5px;
+      color: var(--text-faint);
+      font: 10px var(--font-mono);
+    }
+
+    .condition-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .condition-wide {
+      grid-column: 1 / -1;
+    }
+
+    .condition-grid .panel-body {
+      min-height: 204px;
+    }
+
+    .csv-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--text-dim);
+      font: 11px var(--font-mono);
+      cursor: pointer;
+      margin-left: auto;
+    }
+
+    .csv-option input {
+      accent-color: var(--accent);
+    }
+
     /* history table */
     table {
       width: 100%;
@@ -1077,6 +1295,7 @@
       gap: 8px;
       align-items: center;
       margin-bottom: 14px;
+      flex-wrap: wrap;
     }
 
     select,
@@ -1499,6 +1718,15 @@
         right: 14px;
         bottom: 14px;
         padding: 12px 16px;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .loading-condition {
+        border-left: 0;
+        border-top: 1px solid var(--line);
+        padding-left: 0;
+        padding-top: 10px;
       }
 
       .metric-grid {
@@ -1506,8 +1734,30 @@
       }
 
       .row2,
-      .settings-grid {
+      .settings-grid,
+      .condition-grid {
         grid-template-columns: 1fr;
+      }
+
+      .analysis-toolbar {
+        align-items: stretch;
+      }
+
+      .analysis-toolbar label,
+      .analysis-toolbar button {
+        flex: 1 1 140px;
+      }
+
+      .danger-action {
+        margin-left: 0;
+      }
+
+      .analysis-cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .condition-wide {
+        grid-column: auto;
       }
 
       .alert-summary {
@@ -1677,8 +1927,15 @@
       <!-- ANALYSIS -->
       <section class="view" id="view-analysis">
         <div class="view-head">
-          <h2>Real-Time Analysis</h2>
-          <div class="meta">rule-based trend summary · refreshes every 10s</div>
+          <h2>Analysis</h2>
+          <div class="meta" id="analysis-range-meta">live telemetry · persistent history</div>
+        </div>
+        <div class="analysis-toolbar">
+          <label>From <input id="analysis-from" type="date"></label>
+          <label>To <input id="analysis-to" type="date"></label>
+          <button class="btn-ghost" id="analysis-apply" type="button">Apply range</button>
+          <button class="btn-ghost" id="analysis-export" type="button">Export analysis</button>
+          <button class="btn-ghost danger-action" id="analysis-clear" type="button">Clear history</button>
         </div>
         <div class="panel" style="margin-bottom:14px;">
           <div class="panel-head">
@@ -1700,6 +1957,49 @@
               <h3>Energy Consumption (kWh)</h3>
             </div>
             <div class="panel-body"><canvas id="chart-energy" height="160"></canvas></div>
+          </div>
+        </div>
+        <div class="view-head analysis-subhead">
+          <h2>Condition Analysis</h2>
+          <div class="meta" id="condition-meta">IEEE C57.91 · waiting for telemetry</div>
+        </div>
+        <div class="analysis-cards" id="condition-cards"></div>
+        <div class="condition-grid">
+          <div class="panel condition-wide">
+            <div class="panel-head">
+              <h3>Hot-spot temperature</h3><span class="tag">warning 110 °C · critical 120 °C</span>
+            </div>
+            <div class="panel-body"><canvas id="chart-hotspot" height="180"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <h3>FAA over time</h3><span class="tag">reference 1.00</span>
+            </div>
+            <div class="panel-body"><canvas id="chart-faa" height="180"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Insulation life consumed</h3><span class="tag">rated life 180,000 h</span>
+            </div>
+            <div class="panel-body"><canvas id="chart-life" height="180"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Load versus voltage</h3><span class="tag">nameplate reference</span>
+            </div>
+            <div class="panel-body"><canvas id="chart-load-voltage" height="180"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Power factor trend</h3><span class="tag">acceptable ≥ 0.85</span>
+            </div>
+            <div class="panel-body"><canvas id="chart-pf" height="180"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Loading duty cycle</h3><span class="tag">observation share</span>
+            </div>
+            <div class="panel-body"><canvas id="chart-duty" height="180"></canvas></div>
           </div>
         </div>
       </section>
@@ -1786,7 +2086,7 @@
               </div>
               <div class="thresh-item c-good">
                 <div class="t-label">Rated kVA</div>
-                <div class="t-val">25 kVA</div>
+                <div class="t-val" id="threshold-kva">25 kVA</div>
               </div>
               <div class="thresh-item c-warn">
                 <div class="t-label">Overloaded</div>
@@ -1836,7 +2136,10 @@
                 </div>
                 <div class="set-field"><label>NOMINAL FREQUENCY (Hz)</label><input type="number" value="60"
                     id="set-fnom"></div>
-                <div class="set-field"><label>AMBIENT TEMPERATURE (°C)</label><input type="number" value="30"></div>
+                <div class="set-field"><label>RATED CURRENT (A)</label><input type="number" value="4.35" step="0.01"
+                    id="set-current"></div>
+                <div class="set-field"><label>AMBIENT TEMPERATURE (°C)</label><input type="number" value="30"
+                    id="set-ambient"></div>
               </div>
               <div>
                 <div class="set-field"><label>OVERLOAD TRIGGER (%)</label><input type="number" value="70"
@@ -1861,14 +2164,31 @@
     </div>
 
     <div class="loading-bar-panel" aria-label="Percent loading">
-      <div class="loading-bar-head">
-        <h3>Percent Loading</h3>
-        <div class="loading-bar-value" id="gauge-load-num">ERR</div>
+      <div class="loading-bar-meter">
+        <div class="loading-bar-head">
+          <h3>Percent Loading</h3>
+          <div class="loading-bar-actions">
+            <div class="loading-bar-value" id="gauge-load-num">ERR</div>
+            <button class="loading-panel-toggle" id="loading-panel-toggle" type="button"
+              aria-label="Minimize loading panel" title="Minimize loading panel">−</button>
+          </div>
+        </div>
+        <div class="loading-bar-track">
+          <div class="loading-bar-fill" id="gauge-load-fill"></div>
+        </div>
+        <div class="loading-bar-scale"><span>0</span><span>40 under</span><span>70 over</span><span>100+</span></div>
       </div>
-      <div class="loading-bar-track">
-        <div class="loading-bar-fill" id="gauge-load-fill"></div>
+      <div class="loading-condition">
+        <div class="loading-condition-title">Condition snapshot</div>
+        <div class="loading-condition-grid">
+          <span>Hot-spot <strong id="loading-hotspot">—</strong></span>
+          <span>FAA <strong id="loading-faa">—</strong></span>
+          <span>Stress <strong id="loading-stress">—</strong></span>
+          <span>Regulation <strong id="loading-regulation">—</strong></span>
+          <span>PF <strong id="loading-pf">—</strong></span>
+          <span>Reactive <strong id="loading-reactive">—</strong></span>
+        </div>
       </div>
-      <div class="loading-bar-scale"><span>0</span><span>40 under</span><span>70 over</span><span>100+</span></div>
     </div>
   </div>
 
@@ -2005,6 +2325,20 @@
       sidebarToggle.setAttribute('title', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
       sidebarToggle.setAttribute('aria-expanded', String(!collapsed));
     });
+    const loadingPanel = document.querySelector('.loading-bar-panel');
+    const loadingPanelToggle = document.getElementById('loading-panel-toggle');
+    const setLoadingPanelState = minimized => {
+      loadingPanel.classList.toggle('minimized', minimized);
+      loadingPanelToggle.textContent = minimized ? '+' : '−';
+      loadingPanelToggle.setAttribute('aria-label', minimized ? 'Expand loading panel' : 'Minimize loading panel');
+      loadingPanelToggle.setAttribute('title', minimized ? 'Expand loading panel' : 'Minimize loading panel');
+      loadingPanelToggle.setAttribute('aria-expanded', String(!minimized));
+      localStorage.setItem('mata-loading-panel-minimized', String(minimized));
+    };
+    setLoadingPanelState(localStorage.getItem('mata-loading-panel-minimized') === 'true');
+    loadingPanelToggle.addEventListener('click', () => {
+      setLoadingPanelState(!loadingPanel.classList.contains('minimized'));
+    });
     document.querySelectorAll('nav.tabs button').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
@@ -2019,15 +2353,32 @@
     }, 1000);
 
     /* ================= SETTINGS ================= */
-    let thresh = { kva: 25, vnom: 230, fnom: 60, overload: 70, underload: 40, tempwarn: 65, tempcrit: 105 };
+    let thresh = { kva: 25, vnom: 230, fnom: 60, ratedCurrent: 4.35, ambient: 30, overload: 70, underload: 40, tempwarn: 65, tempcrit: 105 };
+    try {
+      Object.assign(thresh, JSON.parse(localStorage.getItem('mata-condition-settings') || '{}'));
+    } catch (error) {
+      console.warn('Condition settings unavailable; using defaults.', error);
+    }
+    document.getElementById('set-kva').value = thresh.kva;
+    document.getElementById('set-vnom').value = thresh.vnom;
+    document.getElementById('set-fnom').value = thresh.fnom;
+    document.getElementById('set-current').value = thresh.ratedCurrent;
+    document.getElementById('set-ambient').value = thresh.ambient;
+    document.getElementById('threshold-kva').textContent = `${thresh.kva} kVA`;
     function saveSettings() {
       thresh.kva = +document.getElementById('set-kva').value;
       thresh.vnom = +document.getElementById('set-vnom').value;
       thresh.fnom = +document.getElementById('set-fnom').value;
+      thresh.ratedCurrent = +document.getElementById('set-current').value;
+      thresh.ambient = +document.getElementById('set-ambient').value;
       thresh.overload = +document.getElementById('set-overload').value;
       thresh.underload = +document.getElementById('set-underload').value;
       thresh.tempwarn = +document.getElementById('set-tempwarn').value;
       thresh.tempcrit = +document.getElementById('set-tempcrit').value;
+      localStorage.setItem('mata-condition-settings', JSON.stringify(thresh));
+      document.getElementById('threshold-kva').textContent = `${thresh.kva} kVA`;
+      renderConditionAnalysis();
+      refreshLatestCalculations();
       const msg = document.getElementById('save-msg');
       msg.classList.add('show');
       setTimeout(() => msg.classList.remove('show'), 1800);
@@ -2072,7 +2423,14 @@
 
     function initMap() {
       if (map) { map.invalidateSize(); return; }
-      map = L.map('map', { zoomControl: false, attributionControl: true }).setView([0, 0], 2);
+      map = L.map('map', {
+        zoomControl: false,
+        attributionControl: true,
+        minZoom: 2,
+        maxBounds: [[-85, -180], [85, 180]],
+        maxBoundsViscosity: 1,
+        worldCopyJump: false
+      }).setView([0, 0], 2);
       L.control.zoom({ position: 'bottomleft' }).addTo(map);
       map.on('click', event => {
         if (manualPinMode && !userLocationLocked) {
@@ -2083,7 +2441,8 @@
       });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19
+        maxZoom: 19,
+        noWrap: true
       }).addTo(map);
 
       fleet.forEach(dev => {
@@ -2100,10 +2459,15 @@
     }
 
     window.addEventListener('resize', () => { if (map) map.invalidateSize(); });
+    const mapResizeObserver = typeof ResizeObserver === 'function'
+      ? new ResizeObserver(() => { if (map) map.invalidateSize({ pan: false }); })
+      : null;
+    if (mapResizeObserver) mapResizeObserver.observe(document.querySelector('.map-panel'));
 
     /* ================= SIMULATION ================= */
     let t = 0;
     let history = [];
+    const HISTORY_STORAGE_KEY = 'mata-analysis-history-v1';
     let alerts = { total: 0, resolved: 0, warn: 0, crit: 0 };
     let alertLog = [];
     let maxDemand = 0, demandSum = 0, demandCount = 0;
@@ -2111,8 +2475,9 @@
     let simRunning = false;
 
     function classify(s) {
+      const frequencyOutOfBand = s.freq <= thresh.fnom * .99 || s.freq >= thresh.fnom * 1.01;
       if (s.temp >= thresh.tempcrit || s.load >= 100 || s.v <= 210 || s.v >= 250) return 'crit';
-      if (s.temp >= thresh.tempwarn || s.load >= thresh.overload || s.load < thresh.underload || s.v <= 220 || s.v >= 240) return 'warn';
+      if (s.temp >= thresh.tempwarn || s.load >= thresh.overload || s.load < thresh.underload || s.v <= 220 || s.v >= 240 || frequencyOutOfBand) return 'warn';
       return 'ok';
     }
 
@@ -2193,6 +2558,55 @@
       options: baseOpts({ plugins: { legend: { display: false } } })
     });
 
+    const conditionCharts = {
+      hotspot: new Chart(document.getElementById('chart-hotspot'), {
+        type: 'line', data: {
+          labels: [], datasets: [
+            { label: 'Hot-spot °C', data: [], borderColor: '#FF6B6B' },
+            { label: 'Warning 110 °C', data: [], borderColor: '#FFB347', borderDash: [5, 4] },
+            { label: 'Critical 120 °C', data: [], borderColor: '#D90429', borderDash: [3, 3] }
+          ]
+        }, options: baseOpts({ scales: { y: { title: { display: true, text: '°C' } } } })
+      }),
+      faa: new Chart(document.getElementById('chart-faa'), {
+        type: 'line', data: {
+          labels: [], datasets: [
+            { label: 'FAA', data: [], borderColor: '#F2F2F0' },
+            { label: 'Reference 1.00', data: [], borderColor: '#FFB347', borderDash: [5, 4] }
+          ]
+        }, options: baseOpts({ scales: { y: { beginAtZero: true, title: { display: true, text: 'factor' } } } })
+      }),
+      life: new Chart(document.getElementById('chart-life'), {
+        type: 'line', data: { labels: [], datasets: [{ label: 'Cumulative loss of life %', data: [], borderColor: '#D90429' }] },
+        options: baseOpts({ scales: { y: { beginAtZero: true, title: { display: true, text: '%' } } } })
+      }),
+      loadVoltage: new Chart(document.getElementById('chart-load-voltage'), {
+        type: 'line', data: {
+          labels: [], datasets: [
+            { label: 'Load %', data: [], borderColor: '#FF6B6B', yAxisID: 'load' },
+            { label: 'Voltage V', data: [], borderColor: '#F2F2F0', yAxisID: 'voltage' }
+          ]
+        }, options: baseOpts({
+          scales: {
+            load: { position: 'left', title: { display: true, text: 'Load %' } },
+            voltage: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'V' } }
+          }
+        })
+      }),
+      pf: new Chart(document.getElementById('chart-pf'), {
+        type: 'line', data: {
+          labels: [], datasets: [
+            { label: 'Power factor', data: [], borderColor: '#F2F2F0' },
+            { label: 'Acceptable 0.85', data: [], borderColor: '#FFB347', borderDash: [5, 4] }
+          ]
+        }, options: baseOpts({ scales: { y: { min: 0, max: 1, title: { display: true, text: 'PF' } } } })
+      }),
+      duty: new Chart(document.getElementById('chart-duty'), {
+        type: 'bar', data: { labels: ['Underload', 'Normal', 'Pre-alert', 'Overload'], datasets: [{ label: 'Observations', data: [], backgroundColor: ['#77777F', '#F2F2F0', '#FFB347', '#D90429'] }] },
+        options: baseOpts({ scales: { y: { beginAtZero: true, title: { display: true, text: 'samples' } } }, plugins: { legend: { display: false } } })
+      })
+    };
+
     function pushChart(chart, label, values, cap = 60) {
       chart.data.labels.push(label);
       values.forEach((v, idx) => chart.data.datasets[idx].data.push(v));
@@ -2202,6 +2616,187 @@
       }
       chart.update('none');
     }
+
+    function finiteValue(value) {
+      return Number.isFinite(Number(value));
+    }
+
+    function deriveCondition(sample, previous) {
+      const hotspot = finiteValue(sample.hotspot) ? Number(sample.hotspot) : sample.temp;
+      const hotspotRise = finiteValue(sample.hotspotRise) ? Number(sample.hotspotRise) : hotspot - thresh.ambient;
+      const faa = finiteValue(sample.faa) ? Number(sample.faa) : hotspot > -273 ? Math.exp((15000 / 383) - (15000 / (hotspot + 273))) : NaN;
+      const stress = finiteValue(sample.stress) ? Number(sample.stress) : Math.pow(sample.i / thresh.ratedCurrent, 2);
+      const reactive = finiteValue(sample.q) ? Number(sample.q) : Math.sqrt(Math.max(0, Math.pow(sample.kva, 2) - Math.pow(sample.p, 2)));
+      const lifeFromDevice = finiteValue(sample.lifeLoss) ? Number(sample.lifeLoss) : NaN;
+      const elapsedHours = previous ? Math.min(1, Math.max(0, (sample.t - previous.t) / 3600000)) : 0;
+      const lifeLoss = finiteValue(lifeFromDevice) ? lifeFromDevice : (previous?.lifeLoss || 0) + (finiteValue(faa) ? faa * elapsedHours / 180000 * 100 : 0);
+      return {
+        ...sample,
+        load: finiteValue(sample.kva) && thresh.kva > 0 ? sample.kva / thresh.kva * 100 : sample.load,
+        hotspot,
+        hotspotRise,
+        faa,
+        stress,
+        reactive,
+        lifeLoss,
+        regulation: finiteValue(sample.v) ? ((sample.v - thresh.vnom) / thresh.vnom) * 100 : NaN
+      };
+    }
+
+    function renderConditionCards() {
+      const records = getAnalysisRows();
+      const validDemand = records.map(sample => sample.kva).filter(Number.isFinite);
+      const peak = validDemand.length ? Math.max(...validDemand) : NaN;
+      const average = validDemand.length ? validDemand.reduce((sum, value) => sum + value, 0) / validDemand.length : NaN;
+      const loadFactor = peak > 0 ? average / peak * 100 : NaN;
+      const peakAverage = average > 0 ? peak / average : NaN;
+      const latest = records.at(-1);
+      const cards = [
+        ['Hot-spot', latest?.hotspot, '°C', 'warning 110 · critical 120'],
+        ['FAA', latest?.faa, '', 'reference 1.00'],
+        ['Life consumed', latest?.lifeLoss, '%', 'rated life 180,000 h'],
+        ['Load factor', loadFactor, '%', 'average / peak demand'],
+        ['Peak / average', peakAverage, 'x', 'demand ratio'],
+        ['Stress index', latest?.stress, '', '(I / I-rated)²'],
+        ['Voltage regulation', latest?.regulation, '%', `nominal ${thresh.vnom} V`],
+        ['Reactive power', latest?.reactive, 'kVAR', 'from S and P']
+      ];
+      document.getElementById('condition-cards').innerHTML = cards.map(([label, value, unit, note]) => `
+        <article class="analysis-card"><span class="label">${label}</span><strong class="value">${finiteValue(value) ? fmt(value, label === 'Life consumed' ? 5 : 2) : 'Collecting data'}${finiteValue(value) ? ` ${unit}` : ''}</strong><span class="note">${note}</span></article>
+      `).join('');
+      document.getElementById('condition-meta').textContent = records.length
+        ? `${records.length} samples · ambient ${thresh.ambient} °C · rated ${thresh.kva} kVA`
+        : 'IEEE C57.91 · waiting for telemetry';
+      const loadingValues = {
+        'loading-hotspot': finiteValue(latest?.hotspot) ? `${fmt(latest.hotspot, 1)} °C` : '—',
+        'loading-faa': finiteValue(latest?.faa) ? fmt(latest.faa, 2) : '—',
+        'loading-stress': finiteValue(latest?.stress) ? fmt(latest.stress, 2) : '—',
+        'loading-regulation': finiteValue(latest?.regulation) ? `${fmt(latest.regulation, 2)} %` : '—',
+        'loading-pf': finiteValue(latest?.pf) ? fmt(latest.pf, 2) : '—',
+        'loading-reactive': finiteValue(latest?.reactive) ? `${fmt(latest.reactive, 2)} kVAR` : '—'
+      };
+      Object.entries(loadingValues).forEach(([id, value]) => { document.getElementById(id).textContent = value; });
+    }
+
+    function renderConditionCharts() {
+      const records = getAnalysisRows();
+      const labels = records.map(sample => sample.t.toLocaleTimeString('en-PH', { hour12: false, minute: '2-digit', second: '2-digit' }));
+      const set = (chart, values) => {
+        chart.data.labels = labels;
+        chart.data.datasets.forEach((dataset, index) => { dataset.data = values[index]; });
+        chart.update('none');
+      };
+      set(conditionCharts.hotspot, [records.map(sample => sample.hotspot), records.map(() => 110), records.map(() => 120)]);
+      set(conditionCharts.faa, [records.map(sample => sample.faa), records.map(() => 1)]);
+      set(conditionCharts.life, [records.map(sample => sample.lifeLoss)]);
+      set(conditionCharts.loadVoltage, [records.map(sample => sample.load), records.map(sample => sample.v)]);
+      set(conditionCharts.pf, [records.map(sample => sample.pf), records.map(() => .85)]);
+      const bands = [records.filter(sample => sample.load < 30).length, records.filter(sample => sample.load >= 30 && sample.load <= 70).length, records.filter(sample => sample.load > 70 && sample.load < 80).length, records.filter(sample => sample.load >= 80).length];
+      set(conditionCharts.duty, [bands]);
+      renderConditionCards();
+    }
+
+    function renderConditionAnalysis() {
+      if (!history.length) {
+        renderConditionCharts();
+        return;
+      }
+      let previous;
+      history = history.map(sample => {
+        const next = deriveCondition(sample, previous);
+        previous = next;
+        return next;
+      });
+      persistHistory();
+      renderConditionCharts();
+    }
+
+    function refreshLatestCalculations() {
+      const latest = history.at(-1);
+      if (!latest) return;
+      const state = classify(latest);
+      updateMetricCard('v', latest.v, 'V', (latest.v <= 220 || latest.v >= 240) ? 'warn' : 'ok', 1);
+      updateMetricCard('i', latest.i, 'A', 'ok', 1);
+      updateMetricCard('temp', latest.temp, '°C', latest.temp >= thresh.tempcrit ? 'crit' : latest.temp >= thresh.tempwarn ? 'warn' : 'ok', 1);
+      updateMetricCard('kva', latest.kva, 'kVA', 'ok', 2);
+      updateMetricCard('load', latest.load, '%', latest.load >= 100 ? 'crit' : (latest.load >= thresh.overload || latest.load < thresh.underload) ? 'warn' : 'ok', 0);
+      updateMetricCard('pf', latest.pf, '', latest.pf < 0.85 ? 'warn' : 'ok', 2);
+      document.getElementById('kv-loadstatus').textContent = state === 'ok' ? 'Normal' : state === 'warn' ? 'Warning' : 'Critical';
+      document.getElementById('kv-loadstatus').style.color = state === 'ok' ? 'var(--good)' : state === 'warn' ? 'var(--warn)' : 'var(--crit)';
+      document.getElementById('kv-s').textContent = fmt(latest.kva, 3) + ' kVA';
+      document.getElementById('kv-p').textContent = fmt(latest.p, 3) + ' kW';
+      document.getElementById('kv-q').textContent = fmt(latest.q, 3) + ' kVAR';
+      const demands = history.map(sample => sample.kva).filter(Number.isFinite);
+      document.getElementById('kv-maxdemand').textContent = fmt(Math.max(...demands), 3) + ' kVA';
+      document.getElementById('kv-avgdemand').textContent = fmt(demands.reduce((sum, value) => sum + value, 0) / demands.length, 3) + ' kVA';
+      document.getElementById('gauge-load-num').innerHTML = fmt(latest.load, 0) + '<small>%</small>';
+      document.getElementById('gauge-load-fill').style.width = Math.min(100, latest.load) + '%';
+      document.getElementById('gauge-load-fill').style.background = state === 'crit' ? 'var(--crit)' : state === 'warn' ? 'var(--warn)' : 'var(--good)';
+      updateAnalysis();
+      renderHistoryTable();
+    }
+
+    function getAnalysisRows() {
+      const fromValue = document.getElementById('analysis-from').value;
+      const toValue = document.getElementById('analysis-to').value;
+      const from = fromValue ? new Date(`${fromValue}T00:00:00`) : null;
+      const to = toValue ? new Date(`${toValue}T23:59:59.999`) : null;
+      return history.filter(sample => (!from || sample.t >= from) && (!to || sample.t <= to));
+    }
+
+    function persistHistory() {
+      try {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.map(sample => ({ ...sample, t: sample.t.toISOString() }))));
+      } catch (error) {
+        console.warn('Unable to persist telemetry history.', error);
+      }
+    }
+
+    function restoreHistory() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]');
+        if (!Array.isArray(saved)) return;
+        let previous;
+        history = saved.map(sample => deriveCondition({ ...sample, t: new Date(sample.t) }, previous)).filter(sample => {
+          const valid = sample.t.toString() !== 'Invalid Date';
+          if (valid) previous = sample;
+          return valid;
+        });
+      } catch (error) {
+        history = [];
+        console.warn('Unable to restore telemetry history.', error);
+      }
+    }
+
+    function renderHistoryTable() {
+      const tbody = document.getElementById('history-body');
+      tbody.innerHTML = '';
+      getAnalysisRows().slice(-300).reverse().forEach(sample => addHistoryRow(sample, classify(sample)));
+      document.getElementById('history-count').textContent = `${history.length} records`;
+    }
+
+    function applyAnalysisRange() {
+      renderConditionAnalysis();
+      renderHistoryTable();
+      const rows = getAnalysisRows();
+      document.getElementById('analysis-range-meta').textContent = rows.length === history.length
+        ? `${history.length} persistent records`
+        : `${rows.length} of ${history.length} records in selected range`;
+    }
+
+    function clearAnalysisHistory() {
+      if (!history.length || !window.confirm('Clear all saved telemetry and analysis history?')) return;
+      history = [];
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+      backendLastTs = null;
+      resetBackendCharts();
+      renderHistoryTable();
+      showToast('Analysis history cleared');
+    }
+
+    restoreHistory();
+    renderConditionAnalysis();
+    renderHistoryTable();
 
     /* ---- alerts ---- */
     function pushAlert(sample, state, reason) {
@@ -2236,6 +2831,7 @@
         if (sample.load >= thresh.overload) reason.push(`load ${fmt(sample.load, 0)}% (overload)`);
         if (sample.load < thresh.underload) reason.push(`load ${fmt(sample.load, 0)}% (underload)`);
         if (sample.v <= 220 || sample.v >= 240) reason.push(`voltage ${fmt(sample.v)}V out of band`);
+        if (sample.freq <= thresh.fnom * .99 || sample.freq >= thresh.fnom * 1.01) reason.push(`frequency ${fmt(sample.freq, 2)}Hz out of band`);
         pushAlert(sample, state, reason.join(', ') || 'threshold exceeded');
       }
       lastState = state;
@@ -2257,12 +2853,18 @@
     }
 
     /* ---- history table ---- */
+    function formatHistoryTimestamp(date) {
+      const datePart = date.toLocaleDateString('en-PH', { month: 'short', day: '2-digit', year: 'numeric' });
+      const timePart = date.toLocaleTimeString('en-PH', { hour12: false });
+      return `${datePart} ${timePart}`;
+    }
+
     function addHistoryRow(sample, state) {
       const tbody = document.getElementById('history-body');
       const tr = document.createElement('tr');
       const statusClass = state === 'crit' ? 'crit' : state === 'warn' ? 'warn' : 'ok';
       const statusText = state === 'crit' ? 'CRITICAL' : state === 'warn' ? 'WARNING' : 'OK';
-      tr.innerHTML = `<td>${sample.t.toLocaleTimeString('en-PH', { hour12: false })}</td>
+      tr.innerHTML = `<td>${formatHistoryTimestamp(sample.t)}</td>
       <td>${fmt(sample.v, 3)}</td><td>${fmt(sample.i, 3)}</td><td>${fmt(sample.temp, 3)}</td>
     <td>${fmt(sample.kva, 3)}</td><td>${fmt(sample.load, 3)}</td><td>${fmt(sample.pf, 3)}</td>
     <td>${fmt(sample.p, 3)}</td><td>${fmt(sample.freq, 3)}</td>
@@ -2273,17 +2875,25 @@
     }
 
     function exportCSV() {
-      let csv = 'Time,Voltage,Current,Temp,kVA,Load%,PF,kW,Freq,Status\n';
-      history.forEach(s => {
+      const rows = getAnalysisRows();
+      const demand = rows.map(sample => sample.kva).filter(Number.isFinite);
+      const peak = demand.length ? Math.max(...demand) : NaN;
+      const average = demand.length ? demand.reduce((sum, value) => sum + value, 0) / demand.length : NaN;
+      const loadFactor = peak > 0 ? average / peak * 100 : NaN;
+      const peakAverage = average > 0 ? peak / average : NaN;
+      const headers = ['Timestamp', 'Device', 'Voltage_V', 'Voltage_Status', 'Current_A', 'Ambient_C', 'Winding_Temperature_C', 'Temperature_Status', 'Hotspot_C', 'Hotspot_Rise_C', 'Frequency_Hz', 'Frequency_Status', 'Apparent_Power_kVA', 'Active_Power_kW', 'Reactive_Power_kVAR', 'Power_Factor', 'PF_Status', 'Load_%', 'Load_Status', 'Load_Factor_%', 'Peak_Average_Demand_Ratio', 'Voltage_Regulation_%', 'Loading_Stress_Index', 'FAA', 'Cumulative_Life_Loss_%', 'Fault_Type', 'SMS_Alerts_Enabled', 'Status'];
+      let csv = headers.join(',') + '\n';
+      rows.forEach(s => {
         const state = classify(s);
-        csv += `${s.t.toLocaleTimeString('en-PH', { hour12: false })},${fmt(s.v, 3)},${fmt(s.i, 3)},${fmt(s.temp, 3)},${fmt(s.kva, 3)},${fmt(s.load, 3)},${fmt(s.pf, 3)},${fmt(s.p, 3)},${fmt(s.freq, 3)},${state}\n`;
+        csv += [s.t.toISOString(), MATA_DEVICE_ID, s.v, s.voltageStatus, s.i, thresh.ambient, s.temp, s.tempStatus, s.hotspot, s.hotspotRise, s.freq, s.freqStatus, s.kva, s.p, s.reactive, s.pf, s.pfStatus, s.load, s.loadStatus, loadFactor, peakAverage, s.regulation, s.stress, s.faa, s.lifeLoss, s.faultType, s.smsAlertsEnabled, state]
+          .map(value => Number.isFinite(value) || typeof value === 'boolean' ? value : value || '').join(',') + '\n';
       });
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = 'mata_history_log.csv'; a.click();
+      a.href = url; a.download = 'mata_analysis_history.csv'; a.click();
       URL.revokeObjectURL(url);
-      showToast(`Exported ${history.length} records to CSV`);
+      showToast(`Exported ${rows.length} analysis records`);
     }
 
     function renderSensorError(message) {
@@ -2302,6 +2912,9 @@
       document.getElementById('gauge-load-num').textContent = 'ERR';
       document.getElementById('gauge-load-fill').style.width = '0%';
       document.getElementById('gauge-load-fill').style.background = 'var(--crit)';
+      ['loading-hotspot', 'loading-faa', 'loading-stress', 'loading-regulation', 'loading-pf', 'loading-reactive'].forEach(id => {
+        document.getElementById(id).textContent = 'ERR';
+      });
       document.getElementById('overview-meta').textContent = message;
       document.getElementById('analysis-text').textContent = message;
     }
@@ -2321,6 +2934,9 @@
       document.getElementById('gauge-load-num').textContent = 'ERR';
       document.getElementById('gauge-load-fill').style.width = '0%';
       document.getElementById('gauge-load-fill').style.background = 'var(--crit)';
+      ['loading-hotspot', 'loading-faa', 'loading-stress', 'loading-regulation', 'loading-pf', 'loading-reactive'].forEach(id => {
+        document.getElementById(id).textContent = 'ERR';
+      });
       document.getElementById('overview-meta').textContent = message;
       document.getElementById('analysis-text').textContent = message;
     }
@@ -2330,10 +2946,11 @@
         renderSensorError('Incomplete sensor readings');
         return;
       }
-      const s = sample;
+      if (history.some(record => record.t.getTime() === sample.t.getTime())) return;
+      const s = deriveCondition(sample, history.at(-1));
       t += 1;
       history.push(s);
-      if (history.length > 500) history.shift();
+      persistHistory();
       const state = classify(s);
 
       updateMetricCard('v', s.v, 'V', (s.v <= 220 || s.v >= 240) ? 'warn' : 'ok', 1);
@@ -2372,6 +2989,7 @@
       addHistoryRow(s, state);
       evaluateAlert(s, state);
       if (t % 5 === 0) updateAnalysis();
+      renderConditionCharts();
 
       // reflect live state on the active device's map marker
       const dev = fleet.find(d => d.id === activeDeviceId);
@@ -2403,7 +3021,19 @@
         pf: numberOrNaN(row.power_factor),
         p: numberOrNaN(row.active_power_w) / 1000,
         q: numberOrNaN(row.reactive_power_var) / 1000,
-        freq: numberOrNaN(row.frequency_hz)
+        freq: numberOrNaN(row.frequency_hz),
+        hotspot: numberOrNaN(row.hotspot_c),
+        hotspotRise: numberOrNaN(row.hotspot_rise_c),
+        faa: numberOrNaN(row.aging_acceleration_factor),
+        stress: numberOrNaN(row.loading_stress_index),
+        lifeLoss: numberOrNaN(row.cumulative_life_loss_pct),
+        voltageStatus: row.voltage_status || '',
+        tempStatus: row.temp_status || '',
+        freqStatus: row.freq_status || '',
+        pfStatus: row.pf_status || '',
+        loadStatus: row.load_status || '',
+        faultType: row.fault_type || '',
+        smsAlertsEnabled: row.sms_alerts_enabled == null ? '' : row.sms_alerts_enabled
       };
     }
 
@@ -2507,15 +3137,15 @@
     document.getElementById('coordinate-form').addEventListener('submit', applyCoordinatePin);
 
     function resetBackendCharts() {
-      [chartVI, chartTemp, chartLoad, chartEnergy].forEach(chart => {
+      [...[chartVI, chartTemp, chartLoad, chartEnergy], ...Object.values(conditionCharts)].forEach(chart => {
         chart.data.labels = [];
         chart.data.datasets.forEach(dataset => { dataset.data = []; });
         chart.update('none');
       });
       document.getElementById('history-body').innerHTML = '';
-      history = [];
       t = 0;
       lastState = 'ok';
+      renderConditionCharts();
     }
 
     async function refreshBackend(force = false) {
@@ -2524,7 +3154,7 @@
         .select('*')
         .eq('device_id', MATA_DEVICE_ID)
         .order('ts', { ascending: false })
-        .limit(60);
+        .limit(5000);
       if (error) throw error;
       if (!data || !data.length) throw new Error('No readings found for ' + MATA_DEVICE_ID);
 
@@ -2546,6 +3176,8 @@
       } else if (hasNewReading) {
         tick(sampleFromReading(newest));
       }
+      renderHistoryTable();
+      renderConditionAnalysis();
       backendLastTs = newest.ts;
       document.getElementById('overview-meta').textContent = 'Last reading ' + receivedAt.toLocaleString('en-PH');
 
@@ -2570,6 +3202,10 @@
     }
 
     refreshButton.addEventListener('click', refreshReadings);
+    document.getElementById('analysis-apply').addEventListener('click', applyAnalysisRange);
+    document.getElementById('analysis-export').addEventListener('click', exportCSV);
+    document.getElementById('analysis-clear').addEventListener('click', clearAnalysisHistory);
+    ['analysis-from', 'analysis-to'].forEach(id => document.getElementById(id).addEventListener('change', applyAnalysisRange));
 
     async function startTelemetry() {
       if (simRunning) return;
