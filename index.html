@@ -740,6 +740,8 @@
       width: 34px;
       height: 34px;
       padding: 0;
+      display: grid;
+      place-items: center;
       border: 1px solid var(--glass-border);
       border-radius: 8px;
       background: rgba(21, 21, 24, .78);
@@ -766,7 +768,7 @@
       display: block;
       width: 13px;
       height: 11px;
-      transform: translateY(3px);
+      transform: none;
       border: 2px solid currentColor;
       border-radius: 2px;
     }
@@ -1221,6 +1223,8 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 14px;
+      width: min(100%, 1180px);
+      margin: 0 auto;
     }
 
     .condition-wide {
@@ -1228,7 +1232,44 @@
     }
 
     .condition-grid .panel-body {
-      min-height: 204px;
+      height: 248px;
+      overflow: hidden;
+    }
+
+    #view-analysis>.row2,
+    #view-analysis>.panel,
+    #view-analysis>.analysis-toolbar,
+    #view-analysis>.analysis-subhead,
+    #view-analysis>.analysis-cards {
+      width: min(100%, 1180px);
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    #view-analysis>.row2 {
+      min-width: 0;
+    }
+
+    #view-analysis .panel {
+      min-width: 0;
+    }
+
+    #view-analysis .panel-body {
+      width: 100%;
+      min-width: 0;
+      height: 232px;
+      overflow: hidden;
+    }
+
+    #view-analysis .condition-grid .panel-body {
+      height: 248px;
+    }
+
+    #view-analysis canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100%;
     }
 
     .csv-option {
@@ -1760,6 +1801,39 @@
         grid-column: auto;
       }
 
+
+      @media (max-width: 560px) {
+        #main {
+          padding-left: 14px;
+          padding-right: 14px;
+        }
+
+        .analysis-cards {
+          grid-template-columns: 1fr;
+        }
+
+        .analysis-toolbar label,
+        .analysis-toolbar button {
+          flex-basis: 100%;
+          width: 100%;
+        }
+
+        #view-analysis .panel-head {
+          align-items: flex-start;
+          gap: 6px;
+        }
+
+        #view-analysis .panel-head .tag {
+          white-space: normal;
+          text-align: right;
+        }
+
+        #view-analysis .panel-body,
+        #view-analysis .condition-grid .panel-body {
+          height: 205px;
+        }
+      }
+
       .alert-summary {
         grid-template-columns: repeat(2, 1fr);
       }
@@ -2193,6 +2267,8 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -2217,8 +2293,23 @@
     let accessRefreshNoticeShown = false;
     const MAX_READING_AGE_MS = 30000;
     const refreshButton = document.getElementById('refresh-button');
+    const USER_LOCATION_STORAGE_KEY = 'mata-user-location-v1';
     let userLocationMarker = null;
-    let userLocationLocked = false;
+    let savedUserLocation = null;
+    try {
+      const storedLocation = JSON.parse(localStorage.getItem(USER_LOCATION_STORAGE_KEY) || 'null');
+      if (storedLocation && Number.isFinite(Number(storedLocation.latitude)) && Number.isFinite(Number(storedLocation.longitude))) {
+        savedUserLocation = {
+          latitude: Number(storedLocation.latitude),
+          longitude: Number(storedLocation.longitude),
+          source: storedLocation.source || 'SAVED LOCATION',
+          locked: storedLocation.locked === true
+        };
+      }
+    } catch (error) {
+      console.warn('Saved map location unavailable.', error);
+    }
+    let userLocationLocked = savedUserLocation?.locked === true;
     let manualPinMode = false;
 
     /* ================= TOAST ================= */
@@ -2444,6 +2535,7 @@
         maxZoom: 19,
         noWrap: true
       }).addTo(map);
+      restoreLockedUserLocation();
 
       fleet.forEach(dev => {
         if (!Number.isFinite(dev.lat) || !Number.isFinite(dev.lng)) return;
@@ -2498,17 +2590,30 @@
     Chart.defaults.font.family = "'IBM Plex Mono', monospace";
     Chart.defaults.font.size = 10;
     Chart.defaults.borderColor = '#34343B';
+    Chart.register(window.ChartZoom);
 
     function baseOpts(extra = {}) {
-      return Object.assign({
-        responsive: true, animation: false,
-        plugins: { legend: { labels: { boxWidth: 10, font: { size: 10 } } } },
+      const defaults = {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: {
+          legend: { labels: { boxWidth: 10, font: { size: 10 } } },
+          zoom: {
+            pan: { enabled: true, mode: 'x', modifierKey: 'shift' },
+            zoom: { wheel: { enabled: true }, pinch: { enabled: true }, drag: { enabled: true }, mode: 'x' }
+          }
+        },
         scales: {
           x: { grid: { color: '#232328' }, ticks: { maxTicksLimit: 6 } },
           y: { grid: { color: '#232328' } }
         },
         elements: { point: { radius: 0 }, line: { tension: 0.3, borderWidth: 1.6 } }
-      }, extra);
+      };
+      return {
+        ...defaults,
+        ...extra,
+        plugins: { ...defaults.plugins, ...(extra.plugins || {}) },
+        scales: { ...defaults.scales, ...(extra.scales || {}) }
+      };
     }
 
     const chartVI = new Chart(document.getElementById('chart-vi'), {
@@ -3038,6 +3143,11 @@
     }
 
     async function updateMapLocation() {
+      if (userLocationLocked && savedUserLocation) {
+        document.getElementById('map-location-source').textContent = 'USER PIN LOCKED';
+        if (map) map.setView([savedUserLocation.latitude, savedUserLocation.longitude], Math.max(map.getZoom(), 11));
+        return;
+      }
       const { data: gps } = await mataSupabase
         .from('gps_log')
         .select('latitude, longitude')
@@ -3069,8 +3179,8 @@
       if (map) map.setView([device.lat, device.lng], 11);
     }
 
-    function setUserLocation(latitude, longitude, source) {
-      if (userLocationLocked || !map) return;
+    function setUserLocation(latitude, longitude, source, force = false) {
+      if ((userLocationLocked && !force) || !map) return;
       if (!userLocationMarker) {
         userLocationMarker = L.circleMarker([latitude, longitude], {
           radius: 8, color: '#FFFFFF', weight: 3, fillColor: '#E63946', fillOpacity: 1
@@ -3081,7 +3191,25 @@
       userLocationMarker.bindPopup(`<div class="pop-name">Your location</div><div class="pop-row"><span>Source</span><span>${source}</span></div>`);
       userLocationMarker.openPopup();
       map.panTo([latitude, longitude]);
+      savedUserLocation = { latitude, longitude, source, locked: userLocationLocked };
+      localStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(savedUserLocation));
       showToast('Your location pinned');
+    }
+
+    function updatePinLockButton() {
+      const button = document.getElementById('pin-lock-button');
+      button.classList.toggle('active', userLocationLocked);
+      button.querySelector('.lock-icon').classList.toggle('locked', userLocationLocked);
+      button.setAttribute('aria-label', userLocationLocked ? 'Unlock location pin' : 'Lock location pin');
+      button.setAttribute('title', userLocationLocked ? 'Unlock location pin' : 'Lock location pin');
+      button.setAttribute('aria-pressed', String(userLocationLocked));
+    }
+
+    function restoreLockedUserLocation() {
+      if (!userLocationLocked || !savedUserLocation || !map) return;
+      setUserLocation(savedUserLocation.latitude, savedUserLocation.longitude, savedUserLocation.source, true);
+      document.getElementById('map-location-source').textContent = 'USER PIN LOCKED';
+      updatePinLockButton();
     }
 
     function autoPinLocation() {
@@ -3105,11 +3233,12 @@
 
     function togglePinLock() {
       userLocationLocked = !userLocationLocked;
-      const button = document.getElementById('pin-lock-button');
-      button.classList.toggle('active', userLocationLocked);
-      button.querySelector('.lock-icon').classList.toggle('locked', userLocationLocked);
-      button.setAttribute('aria-label', userLocationLocked ? 'Unlock location pin' : 'Lock location pin');
-      button.setAttribute('title', userLocationLocked ? 'Unlock location pin' : 'Lock location pin');
+      if (userLocationMarker) {
+        const position = userLocationMarker.getLatLng();
+        savedUserLocation = { latitude: position.lat, longitude: position.lng, source: 'USER PIN', locked: userLocationLocked };
+        localStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(savedUserLocation));
+      }
+      updatePinLockButton();
       showToast(userLocationLocked ? 'Location pin locked' : 'Location pin unlocked');
     }
 
